@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 import { db } from "@/api/dbClient";
 
 import { useQuery } from "@tanstack/react-query";
@@ -8,7 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Download, TrendingUp, TrendingDown, Scale, Receipt, ChevronDown, ChevronUp } from "lucide-react";
-import { format, startOfYear, endOfYear, startOfQuarter, endOfQuarter } from "date-fns";
+import { format } from "date-fns";
+import {
+  getFullYearRangeDates,
+  getQuarterDates,
+  formatYearFilterLabel,
+  getCalendarQuarterLabel,
+  getFinQuarterLabel,
+  FY_APR_MAR_QUARTER_LABELS,
+} from "@/lib/yearFilterDates";
+import { dateFilterInputClassName } from "@/lib/dateFilterInputClassName";
 
 function fmt(n) { return `£${(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
 function fmtRaw(n) { return (n || 0).toFixed(2); }
@@ -16,27 +25,57 @@ function fmtRaw(n) { return (n || 0).toFixed(2); }
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
-function getPresetDates(preset) {
-  const now = new Date();
-  const y = now.getFullYear();
-  if (preset === "this_year") return { from: `${y}-01-01`, to: `${y}-12-31` };
-  if (preset === "last_year") return { from: `${y - 1}-01-01`, to: `${y - 1}-12-31` };
-  const pad = (n) => String(n).padStart(2, "0");
-  const quarters = [
-    { from: `${y}-01-01`, to: `${y}-03-31` },
-    { from: `${y}-04-01`, to: `${y}-06-30` },
-    { from: `${y}-07-01`, to: `${y}-09-30` },
-    { from: `${y}-10-01`, to: `${y}-12-31` },
-  ];
-  const fqQuarters = [
-    { from: `${y - 1}-12-01`, to: `${y}-02-28` },
-    { from: `${y}-03-01`, to: `${y}-05-31` },
-    { from: `${y}-06-01`, to: `${y}-08-31` },
-    { from: `${y}-09-01`, to: `${y}-11-30` },
-  ];
-  if (preset.startsWith("q")) return quarters[parseInt(preset[1]) - 1];
-  if (preset.startsWith("fq")) return fqQuarters[parseInt(preset[2]) - 1];
+const REPORTS_QUICK_PLACEHOLDER = "__choose__";
+
+function getQuickPresetDates(preset) {
+  if (!preset || preset === "custom" || preset === REPORTS_QUICK_PLACEHOLDER) return { from: "", to: "" };
+  const y = currentYear;
+  if (preset === "this_year") {
+    const { date_from, date_to } = getFullYearRangeDates(`c-${y}`);
+    return { from: date_from, to: date_to };
+  }
+  if (preset === "last_year") {
+    const { date_from, date_to } = getFullYearRangeDates(`c-${y - 1}`);
+    return { from: date_from, to: date_to };
+  }
+  if (/^q[1-4]$/.test(preset)) {
+    const { date_from, date_to } = getQuarterDates(`c-${y}`, `cq${preset[1]}`);
+    return { from: date_from, to: date_to };
+  }
+  if (/^fq[1-4]$/.test(preset)) {
+    const { date_from, date_to } = getQuarterDates(`c-${y}`, preset);
+    return { from: date_from, to: date_to };
+  }
+  if (preset.includes("~")) {
+    const [yearKey, qv] = preset.split("~");
+    const { date_from, date_to } = getQuarterDates(yearKey, qv);
+    return { from: date_from, to: date_to };
+  }
+  if (/^(c|f)-\d{4}$/.test(preset)) {
+    const { date_from, date_to } = getFullYearRangeDates(preset);
+    return { from: date_from, to: date_to };
+  }
   return { from: "", to: "" };
+}
+
+function formatQuickPresetLabel(preset) {
+  if (!preset || preset === REPORTS_QUICK_PLACEHOLDER) return "";
+  if (preset === "custom") return "Custom range";
+  if (preset === "this_year") return `This calendar year (${currentYear})`;
+  if (preset === "last_year") return `Last calendar year (${currentYear - 1})`;
+  if (/^q[1-4]$/.test(preset)) return `${getCalendarQuarterLabel(`cq${preset[1]}`)} (${currentYear})`;
+  if (/^fq[1-4]$/.test(preset)) return `${getFinQuarterLabel(preset)} (${currentYear})`;
+  if (preset.includes("~")) {
+    const [yearKey, qv] = preset.split("~");
+    const yl = formatYearFilterLabel(yearKey);
+    if (qv.startsWith("cq") && /^f-/.test(yearKey)) {
+      return `${yl} · ${FY_APR_MAR_QUARTER_LABELS[qv] || qv}`;
+    }
+    if (qv.startsWith("cq")) return `${yl} · ${getCalendarQuarterLabel(qv)}`;
+    if (qv.startsWith("fq")) return `${yl} · ${getFinQuarterLabel(qv)}`;
+  }
+  if (/^(c|f)-\d{4}$/.test(preset)) return formatYearFilterLabel(preset);
+  return preset;
 }
 
 function downloadVATReport(invoices, dateFrom, dateTo) {
@@ -206,9 +245,15 @@ export default function Reports() {
   });
 
   const handlePreset = (v) => {
+    if (v === REPORTS_QUICK_PLACEHOLDER) {
+      setPreset("");
+      setDateFrom("");
+      setDateTo("");
+      return;
+    }
     setPreset(v);
     if (v === "custom") return;
-    const { from, to } = getPresetDates(v);
+    const { from, to } = getQuickPresetDates(v);
     setDateFrom(from);
     setDateTo(to);
   };
@@ -277,30 +322,88 @@ export default function Reports() {
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Quick Select</Label>
-            <Select value={preset} onValueChange={handlePreset}>
-              <SelectTrigger><SelectValue placeholder="Choose period…" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="this_year">This Year ({currentYear})</SelectItem>
-                <SelectItem value="last_year">Last Year ({currentYear - 1})</SelectItem>
-                <SelectItem value="q1">Q1 — Jan, Feb, Mar</SelectItem>
-                <SelectItem value="q2">Q2 — Apr, May, Jun</SelectItem>
-                <SelectItem value="q3">Q3 — Jul, Aug, Sep</SelectItem>
-                <SelectItem value="q4">Q4 — Oct, Nov, Dec</SelectItem>
-                <SelectItem value="fq1">FQ1 — Dec, Jan, Feb</SelectItem>
-                <SelectItem value="fq2">FQ2 — Mar, Apr, May</SelectItem>
-                <SelectItem value="fq3">FQ3 — Jun, Jul, Aug</SelectItem>
-                <SelectItem value="fq4">FQ4 — Sep, Oct, Nov</SelectItem>
+            <Select value={preset || REPORTS_QUICK_PLACEHOLDER} onValueChange={handlePreset}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose period…">
+                  {preset ? formatQuickPresetLabel(preset) : undefined}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="max-h-[min(24rem,70vh)]">
+                <SelectItem value={REPORTS_QUICK_PLACEHOLDER}>Choose period…</SelectItem>
+                <SelectItem value="this_year">This calendar year ({currentYear})</SelectItem>
+                <SelectItem value="last_year">Last calendar year ({currentYear - 1})</SelectItem>
+                <div className="px-2 pt-2 pb-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Shortcuts — {currentYear}</p>
+                </div>
+                <SelectItem value="q1">{getCalendarQuarterLabel("cq1")} ({currentYear})</SelectItem>
+                <SelectItem value="q2">{getCalendarQuarterLabel("cq2")} ({currentYear})</SelectItem>
+                <SelectItem value="q3">{getCalendarQuarterLabel("cq3")} ({currentYear})</SelectItem>
+                <SelectItem value="q4">{getCalendarQuarterLabel("cq4")} ({currentYear})</SelectItem>
+                <div className="px-2 pt-2 pb-1 border-t border-border mt-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Financial quarters (Dec – Nov) — {currentYear}</p>
+                </div>
+                <SelectItem value="fq1">{getFinQuarterLabel("fq1")}</SelectItem>
+                <SelectItem value="fq2">{getFinQuarterLabel("fq2")}</SelectItem>
+                <SelectItem value="fq3">{getFinQuarterLabel("fq3")}</SelectItem>
+                <SelectItem value="fq4">{getFinQuarterLabel("fq4")}</SelectItem>
+                <div className="px-2 pt-2 pb-1 border-t border-border mt-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Calendar years</p>
+                </div>
+                {YEARS.map((y) => (
+                  <SelectItem key={`c-${y}`} value={`c-${y}`}>{formatYearFilterLabel(`c-${y}`)}</SelectItem>
+                ))}
+                {YEARS.map((y) => (
+                  <React.Fragment key={`c-q-${y}`}>
+                    <div className="px-2 pt-2 pb-1 border-t border-border mt-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Calendar quarters — {y}</p>
+                    </div>
+                    {(["cq1", "cq2", "cq3", "cq4"]).map((qv) => (
+                      <SelectItem key={`c-${y}~${qv}`} value={`c-${y}~${qv}`}>
+                        {y} · {getCalendarQuarterLabel(qv)}
+                      </SelectItem>
+                    ))}
+                  </React.Fragment>
+                ))}
+                <div className="px-2 pt-2 pb-1 border-t border-border mt-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Financial years</p>
+                </div>
+                {YEARS.map((y) => (
+                  <SelectItem key={`f-${y}`} value={`f-${y}`}>{formatYearFilterLabel(`f-${y}`)}</SelectItem>
+                ))}
+                {YEARS.map((y) => (
+                  <React.Fragment key={`f-q-${y}`}>
+                    <div className="px-2 pt-2 pb-1 border-t border-border mt-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">FY quarters (Apr – Mar) — {formatYearFilterLabel(`f-${y}`)}</p>
+                    </div>
+                    {(["cq1", "cq2", "cq3", "cq4"]).map((qv) => (
+                      <SelectItem key={`f-${y}~${qv}`} value={`f-${y}~${qv}`}>
+                        {FY_APR_MAR_QUARTER_LABELS[qv]}
+                      </SelectItem>
+                    ))}
+                  </React.Fragment>
+                ))}
+                <div className="border-t border-border my-2" />
                 <SelectItem value="custom">Custom range…</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">From Date</Label>
-            <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPreset("custom"); }} />
+            <Input
+              type="date"
+              className={dateFilterInputClassName}
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPreset("custom"); }}
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">To Date</Label>
-            <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPreset("custom"); }} />
+            <Input
+              type="date"
+              className={dateFilterInputClassName}
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPreset("custom"); }}
+            />
           </div>
           <div className="flex gap-2">
             <Button className="flex-1" onClick={() => downloadVATReport(filtered, dateFrom, dateTo)} disabled={settled.length === 0}>
@@ -426,7 +529,6 @@ function AESection({ filteredAE, aeByCategory, totalAdditionalExpenses, aeNetTot
       <div className="flex items-center gap-2 mb-4">
         <Receipt className="w-5 h-5 text-muted-foreground" />
         <h2 className="text-xl font-bold tracking-tight">Additional Expenses</h2>
-        <span className="text-sm text-muted-foreground">({filteredAE.length} records in period)</span>
       </div>
 
       {filteredAE.length === 0 ? (

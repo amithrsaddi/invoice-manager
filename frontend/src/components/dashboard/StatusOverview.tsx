@@ -12,18 +12,32 @@ const STATUS_COLORS = {
 
 const STATUSES = ["outstanding", "paid", "pending", "cleared"];
 
+function formatCount(n, singular, plural) {
+  return `${n} ${n === 1 ? singular : plural}`;
+}
+
 function StatusRow({ label, invoices }) {
   const total = invoices.reduce((s, inv) => s + (inv.total_amount || 0), 0);
   const income = invoices.filter((inv) => (inv.invoice_type || "income") === "income");
   const expense = invoices.filter((inv) => inv.invoice_type === "expense");
   const incomeTotal = income.reduce((s, inv) => s + (inv.total_amount || 0), 0);
   const expenseTotal = expense.reduce((s, inv) => s + (inv.total_amount || 0), 0);
+  const ic = income.length;
+  const ec = expense.length;
+  const countLabel =
+    ic > 0 && ec > 0
+      ? `${formatCount(ic, "invoice", "invoices")} · ${formatCount(ec, "expense", "expenses")}`
+      : ic > 0
+        ? formatCount(ic, "invoice", "invoices")
+        : ec > 0
+          ? formatCount(ec, "expense", "expenses")
+          : "0 records";
 
   return (
     <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
       <div className="flex items-center gap-3 min-w-0">
         <Badge variant="outline" className={`capitalize shrink-0 ${STATUS_COLORS[label] || ""}`}>{label}</Badge>
-        <span className="text-sm text-muted-foreground">{invoices.length} invoice{invoices.length !== 1 ? "s" : ""}</span>
+        <span className="text-sm text-muted-foreground">{countLabel}</span>
       </div>
       <div className="flex gap-6 text-sm text-right shrink-0">
         <div>
@@ -46,7 +60,7 @@ function StatusRow({ label, invoices }) {
 export default function StatusOverview({ invoices }) {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
-  const [selectedYear, setSelectedYear] = useState("all");
+  const [selectedYear, setSelectedYear] = useState(String(currentYear));
 
   const filtered = selectedYear === "all"
     ? invoices
@@ -86,7 +100,7 @@ export default function StatusOverview({ invoices }) {
             <p className="text-lg font-bold text-destructive">£{expenseTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-muted-foreground mb-1">All Invoices</p>
+            <p className="text-xs text-muted-foreground mb-1">Grand total</p>
             <p className="text-lg font-bold">£{grandTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
           </div>
         </div>
@@ -104,25 +118,43 @@ export default function StatusOverview({ invoices }) {
 
         {/* Invoice count progress */}
         <div className="mt-4 pt-4 border-t border-border">
-          <p className="text-xs text-muted-foreground mb-2">Invoice distribution</p>
+          <p className="text-xs text-muted-foreground mb-2">Distribution by status</p>
           <div className="flex h-3 rounded-full overflow-hidden gap-0.5">
             {STATUSES.map((status) => {
-              const count = filtered.filter((inv) => inv.status === status).length;
+              const byStatus = filtered.filter((inv) => inv.status === status);
+              const count = byStatus.length;
+              const inc = byStatus.filter((inv) => (inv.invoice_type || "income") === "income").length;
+              const exp = byStatus.filter((inv) => inv.invoice_type === "expense").length;
               const pct = filtered.length > 0 ? (count / filtered.length) * 100 : 0;
               const barColors = { outstanding: "bg-amber-400", paid: "bg-emerald-500", pending: "bg-blue-400", cleared: "bg-slate-400" };
+              const tip = count === 0 ? `${status}: 0` : `${status}: ${inc} invoice${inc !== 1 ? "s" : ""}, ${exp} expense${exp !== 1 ? "s" : ""} (${count} total)`;
               return pct > 0 ? (
-                <div key={status} className={`${barColors[status]} transition-all`} style={{ width: `${pct}%` }} title={`${status}: ${count}`} />
+                <div key={status} className={`${barColors[status]} transition-all`} style={{ width: `${pct}%` }} title={tip} />
               ) : null;
             })}
           </div>
           <div className="flex flex-wrap gap-3 mt-2">
             {STATUSES.map((status) => {
-              const count = filtered.filter((inv) => inv.status === status).length;
+              const byStatus = filtered.filter((inv) => inv.status === status);
+              const inc = byStatus.filter((inv) => (inv.invoice_type || "income") === "income").length;
+              const exp = byStatus.filter((inv) => inv.invoice_type === "expense").length;
               const dotColors = { outstanding: "bg-amber-400", paid: "bg-emerald-500", pending: "bg-blue-400", cleared: "bg-slate-400" };
+              const legend =
+                inc > 0 && exp > 0
+                  ? `${inc} inv · ${exp} exp`
+                  : inc > 0
+                    ? `${inc} inv`
+                    : exp > 0
+                      ? `${exp} exp`
+                      : "0";
               return (
-                <div key={status} className="flex items-center gap-1.5 text-xs text-muted-foreground capitalize">
+                <div
+                  key={status}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground capitalize"
+                  title={inc || exp ? `${inc} invoice${inc !== 1 ? "s" : ""}, ${exp} expense${exp !== 1 ? "s" : ""}` : undefined}
+                >
                   <span className={`w-2 h-2 rounded-full ${dotColors[status]}`} />
-                  {status} ({count})
+                  {status} ({legend})
                 </div>
               );
             })}

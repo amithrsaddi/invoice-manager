@@ -11,6 +11,7 @@ import { Plus, Upload, X, TrendingDown } from "lucide-react";
 import AdditionalExpenseTable from "../components/additional-expenses/AdditionalExpenseTable";
 import AdditionalExpenseFormDialog from "../components/additional-expenses/AdditionalExpenseFormDialog";
 import CSVImportDialog from "../components/additional-expenses/CSVImportDialog";
+import { dateFilterInputClassName } from "@/lib/dateFilterInputClassName";
 
 const CATEGORIES = ["Travel", "Subscriptions", "Office & Supplies", "Food & Drink", "Software", "Professional Services", "Other"];
 const currentYear = new Date().getFullYear();
@@ -100,12 +101,12 @@ export default function AdditionalExpenses() {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">From Date</Label>
-            <Input type="date" value={filters.date_from} onChange={(e) => setFilters((f) => ({ ...f, date_from: e.target.value, year: "" }))} />
+            <Input type="date" className={dateFilterInputClassName} value={filters.date_from} onChange={(e) => setFilters((f) => ({ ...f, date_from: e.target.value, year: "" }))} />
           </div>
           <div className="space-y-1.5 flex flex-col justify-end">
             <Label className="text-xs text-muted-foreground">To Date</Label>
             <div className="flex gap-2">
-              <Input type="date" value={filters.date_to} onChange={(e) => setFilters((f) => ({ ...f, date_to: e.target.value, year: "" }))} />
+              <Input type="date" className={dateFilterInputClassName} value={filters.date_to} onChange={(e) => setFilters((f) => ({ ...f, date_to: e.target.value, year: "" }))} />
               {hasFilters && (
                 <Button variant="outline" size="icon" onClick={() => setFilters({ category: "all", year: "", date_from: "", date_to: "", search: "" })}>
                   <X className="w-4 h-4" />

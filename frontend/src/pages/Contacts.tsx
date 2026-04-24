@@ -4,7 +4,6 @@ import { db } from "@/api/dbClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Plus, Mail, Phone, MapPin, Pencil, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ClientFormDialog from "../components/clients/ClientFormDialog";
@@ -26,7 +25,9 @@ function ContactCard({ name, color = "primary", email, phone, address, invoiceCo
               </div>
               <div>
                 <h3 className="font-semibold">{name}</h3>
-                <p className="text-xs text-muted-foreground">{invoiceCount} invoices · £{total.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
+                <p className="text-xs text-muted-foreground">
+                  {invoiceCount} {invoiceCount === 1 ? "invoice" : "invoices"} · £{total.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+                </p>
               </div>
             </div>
             <div className="flex gap-1">
@@ -68,10 +69,22 @@ export default function Contacts() {
     queryFn: () => db.entities.Invoice.list(),
   });
 
-  const getClientStats = (clientId) => ({
-    count: invoices.filter((inv) => inv.client_id === clientId).length,
-    total: invoices.filter((inv) => inv.client_id === clientId).reduce((s, inv) => s + (inv.total_amount || 0), 0),
-  });
+  const isIncomeInvoice = (inv) => (inv.invoice_type || "income") !== "expense";
+
+  const getClientStats = (client) => {
+    const nameNorm = String(client?.name || "").trim().toLowerCase();
+    const clientInvoices = invoices.filter(
+      (inv) =>
+        isIncomeInvoice(inv) &&
+        (inv.client_id === client.id ||
+          (nameNorm.length > 0 &&
+            String(inv.client_name || "").trim().toLowerCase() === nameNorm))
+    );
+    return {
+      count: clientInvoices.length,
+      total: clientInvoices.reduce((s, inv) => s + (inv.total_amount || 0), 0),
+    };
+  };
 
   const getSupplierStats = (supplierName) => ({
     count: invoices.filter((inv) => inv.invoice_type === "expense" && inv.client_name === supplierName).length,
@@ -101,78 +114,99 @@ export default function Contacts() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
         <p className="text-muted-foreground mt-1">Manage your clients and suppliers</p>
       </div>
 
-      <Tabs defaultValue="clients">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <TabsList>
-            <TabsTrigger value="clients">Clients ({clients.length})</TabsTrigger>
-            <TabsTrigger value="suppliers">Suppliers ({suppliers.length})</TabsTrigger>
-          </TabsList>
-          <div>
-            <TabsContent value="clients" className="mt-0">
-              <Button onClick={() => { setEditClient(null); setClientFormOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" /> Add Client
-              </Button>
-            </TabsContent>
-            <TabsContent value="suppliers" className="mt-0">
-              <Button onClick={() => { setEditSupplier(null); setSupplierFormOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" /> Add Supplier
-              </Button>
-            </TabsContent>
-          </div>
+      <section className="space-y-4" aria-labelledby="contacts-clients-heading">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 id="contacts-clients-heading" className="text-xl font-semibold tracking-tight">
+            Clients <span className="text-muted-foreground font-normal">({clients.length})</span>
+          </h2>
+          <Button onClick={() => { setEditClient(null); setClientFormOpen(true); }}>
+            <Plus className="w-4 h-4 mr-2" /> Add Client
+          </Button>
         </div>
+        {clients.length === 0 ? (
+          <Card className="p-16 text-center">
+            <p className="text-lg font-medium text-muted-foreground">No clients yet</p>
+            <Button className="mt-4" onClick={() => setClientFormOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Add Client
+            </Button>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <AnimatePresence>
+              {clients.map((c) => {
+                const stats = getClientStats(c);
+                return (
+                  <ContactCard
+                    key={c.id}
+                    name={c.name}
+                    color="primary"
+                    email={c.email}
+                    phone={c.phone}
+                    address={c.address}
+                    invoiceCount={stats.count}
+                    total={stats.total}
+                    onEdit={() => {
+                      setEditClient(c);
+                      setClientFormOpen(true);
+                    }}
+                    onDelete={() => setDeleteTarget({ id: c.id, type: "client" })}
+                  />
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        )}
+      </section>
 
-        <TabsContent value="clients" className="mt-4">
-          {clients.length === 0 ? (
-            <Card className="p-16 text-center">
-              <p className="text-lg font-medium text-muted-foreground">No clients yet</p>
-              <Button className="mt-4" onClick={() => setClientFormOpen(true)}><Plus className="w-4 h-4 mr-2" /> Add Client</Button>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <AnimatePresence>
-                {clients.map((c) => {
-                  const stats = getClientStats(c.id);
-                  return (
-                    <ContactCard key={c.id} name={c.name} color="primary" email={c.email} phone={c.phone} address={c.address}
-                      invoiceCount={stats.count} total={stats.total}
-                      onEdit={() => { setEditClient(c); setClientFormOpen(true); }}
-                      onDelete={() => setDeleteTarget({ id: c.id, type: "client" })} />
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="suppliers" className="mt-4">
-          {suppliers.length === 0 ? (
-            <Card className="p-16 text-center">
-              <p className="text-lg font-medium text-muted-foreground">No suppliers yet</p>
-              <Button className="mt-4" onClick={() => setSupplierFormOpen(true)}><Plus className="w-4 h-4 mr-2" /> Add Supplier</Button>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <AnimatePresence>
-                {suppliers.map((s) => {
-                  const stats = getSupplierStats(s.name);
-                  return (
-                    <ContactCard key={s.id} name={s.name} color="destructive" email={s.email} phone={s.phone} address={s.address}
-                      invoiceCount={stats.count} total={stats.total}
-                      onEdit={() => { setEditSupplier(s); setSupplierFormOpen(true); }}
-                      onDelete={() => setDeleteTarget({ id: s.id, type: "supplier" })} />
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      <section className="space-y-4 border-t border-border pt-10" aria-labelledby="contacts-suppliers-heading">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 id="contacts-suppliers-heading" className="text-xl font-semibold tracking-tight">
+            Suppliers <span className="text-muted-foreground font-normal">({suppliers.length})</span>
+          </h2>
+          <Button onClick={() => { setEditSupplier(null); setSupplierFormOpen(true); }}>
+            <Plus className="w-4 h-4 mr-2" /> Add Supplier
+          </Button>
+        </div>
+        {suppliers.length === 0 ? (
+          <Card className="p-16 text-center">
+            <p className="text-lg font-medium text-muted-foreground">No suppliers yet</p>
+            <Button className="mt-4" onClick={() => setSupplierFormOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Add Supplier
+            </Button>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <AnimatePresence>
+              {suppliers.map((s) => {
+                const stats = getSupplierStats(s.name);
+                return (
+                  <ContactCard
+                    key={s.id}
+                    name={s.name}
+                    color="destructive"
+                    email={s.email}
+                    phone={s.phone}
+                    address={s.address}
+                    invoiceCount={stats.count}
+                    total={stats.total}
+                    onEdit={() => {
+                      setEditSupplier(s);
+                      setSupplierFormOpen(true);
+                    }}
+                    onDelete={() => setDeleteTarget({ id: s.id, type: "supplier" })}
+                  />
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        )}
+      </section>
 
       <ClientFormDialog open={clientFormOpen} onClose={() => { setClientFormOpen(false); setEditClient(null); }} client={editClient} />
       <SupplierFormDialog open={supplierFormOpen} onClose={() => { setSupplierFormOpen(false); setEditSupplier(null); }} supplier={editSupplier} />

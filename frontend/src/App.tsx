@@ -13,6 +13,7 @@ import Reports from './pages/Reports';
 import Schedules from './pages/Schedules';
 import AdditionalExpenses from './pages/AdditionalExpenses';
 import Analytics from './pages/Analytics';
+import Activity from './pages/Activity';
 import Auth from './pages/Auth';
 
 const AuthenticatedApp = () => {
@@ -40,6 +41,7 @@ const AuthenticatedApp = () => {
         <Route path="/schedules" element={<Schedules />} />
         <Route path="/additional-expenses" element={<AdditionalExpenses />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/activity" element={<Activity />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

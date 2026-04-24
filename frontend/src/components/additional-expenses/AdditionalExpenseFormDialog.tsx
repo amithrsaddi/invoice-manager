@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { Switch } from "@/components/ui/switch";
+import { dateFilterInputClassName } from "@/lib/dateFilterInputClassName";
 
 const CATEGORIES = ["Travel", "Subscriptions", "Office & Supplies", "Food & Drink", "Software", "Professional Services", "Other"];
 const VAT_RATE = 0.20;
@@ -60,7 +61,7 @@ export default function AdditionalExpenseFormDialog({ open, onClose, expense }) 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Date</Label>
-              <Input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} />
+              <Input type="date" className={dateFilterInputClassName} value={form.date} onChange={(e) => set("date", e.target.value)} />
             </div>
             <div className="space-y-1.5">
               <Label>Amount (£)</Label>

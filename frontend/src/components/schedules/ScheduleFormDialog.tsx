@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { format, addMonths } from "date-fns";
+import { dateFilterInputClassName } from "@/lib/dateFilterInputClassName";
 
 const empty = {
   name: "",
@@ -95,7 +96,7 @@ export default function ScheduleFormDialog({ open, onClose, schedule, clients })
 
           <div className="space-y-1.5">
             <Label>Next Invoice Date</Label>
-            <Input type="date" value={form.next_run_date} onChange={(e) => setField("next_run_date", e.target.value)} />
+            <Input type="date" className={dateFilterInputClassName} value={form.next_run_date} onChange={(e) => setField("next_run_date", e.target.value)} />
           </div>
 
           <div className="pt-2 border-t border-border">

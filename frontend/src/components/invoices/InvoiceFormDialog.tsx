@@ -9,8 +9,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { dateFilterInputClassName } from "@/lib/dateFilterInputClassName";
 
 const emptyItem = { description: "", quantity: 1, unit_price: 0, total: 0 };
+const ALLOWED_ATTACHMENT_EXTENSIONS = [".jpeg", ".jpg", ".png", ".pdf", ".txt", ".docx", ".xlsx"];
+
+const getFileExtension = (fileName = "") => {
+  const lastDot = fileName.lastIndexOf(".");
+  return lastDot >= 0 ? fileName.slice(lastDot).toLowerCase() : "";
+};
+
+const fileToBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const commaIndex = result.indexOf(",");
+      resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result);
+    };
+    reader.onerror = () => reject(new Error("Failed to read file."));
+    reader.readAsDataURL(file);
+  });
 
 export default function InvoiceFormDialog({ open, onClose, invoice, clients }) {
   const queryClient = useQueryClient();
@@ -31,6 +50,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, clients }) {
     status: "pending",
     vat_rate: 20,
     notes: "",
+    attachment: null,
     items: [{ ...emptyItem }],
   });
 
@@ -46,6 +66,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, clients }) {
         status: invoice.status || "pending",
         vat_rate: invoice.vat_rate ?? 20,
         notes: invoice.notes || "",
+        attachment: invoice.attachment || null,
         items: invoice.items?.length ? invoice.items : [{ ...emptyItem }],
       });
     } else {
@@ -59,6 +80,7 @@ export default function InvoiceFormDialog({ open, onClose, invoice, clients }) {
         status: "pending",
         vat_rate: 20,
         notes: "",
+        attachment: null,
         items: [{ ...emptyItem }],
       });
     }
@@ -95,6 +117,35 @@ export default function InvoiceFormDialog({ open, onClose, invoice, clients }) {
     }
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
     onClose();
+  };
+
+  const handleAttachmentChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const extension = getFileExtension(file.name);
+    if (!ALLOWED_ATTACHMENT_EXTENSIONS.includes(extension)) {
+      window.alert(`Unsupported file type. Allowed: ${ALLOWED_ATTACHMENT_EXTENSIONS.join(", ")}`);
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      const content_base64 = await fileToBase64(file);
+      setForm({
+        ...form,
+        attachment: {
+          original_name: file.name,
+          mime_type: file.type || "application/octet-stream",
+          size: file.size,
+          content_base64
+        }
+      });
+    } catch (error) {
+      window.alert(error?.message || "Unable to attach file.");
+    } finally {
+      event.target.value = "";
+    }
   };
 
   return (
@@ -162,11 +213,11 @@ export default function InvoiceFormDialog({ open, onClose, invoice, clients }) {
           )}
           <div className="space-y-1.5">
             <Label>Invoice Date</Label>
-            <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+            <Input type="date" className={dateFilterInputClassName} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           </div>
           <div className="space-y-1.5">
             <Label>Due Date</Label>
-            <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+            <Input type="date" className={dateFilterInputClassName} value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
           </div>
           <div className="space-y-1.5">
             <Label>Status</Label>
@@ -236,6 +287,27 @@ export default function InvoiceFormDialog({ open, onClose, invoice, clients }) {
         <div className="space-y-1.5 mt-4">
           <Label>Notes</Label>
           <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Additional notes..." rows={3} />
+        </div>
+
+        <div className="space-y-2 mt-4">
+          <Label htmlFor="invoice-attachment">Attachment</Label>
+          <Input
+            id="invoice-attachment"
+            type="file"
+            accept={ALLOWED_ATTACHMENT_EXTENSIONS.join(",")}
+            onChange={handleAttachmentChange}
+          />
+          <p className="text-xs text-muted-foreground">Allowed: {ALLOWED_ATTACHMENT_EXTENSIONS.join(", ")}</p>
+          {form.attachment && (
+            <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span className="truncate pr-3">
+                {form.attachment.original_name} ({Math.max(1, Math.round((form.attachment.size || 0) / 1024))} KB)
+              </span>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setForm({ ...form, attachment: null })}>
+                Remove
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 mt-6">

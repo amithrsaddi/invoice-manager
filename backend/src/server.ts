@@ -13,7 +13,7 @@ if (!mongoUri) {
 }
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || "http://localhost:5173" }));
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
 
 const baseSchema = {
   created_date: { type: Date, default: Date.now },
@@ -46,7 +46,8 @@ const invoiceSchema = new mongoose.Schema(
     vat_amount: Number,
     total_amount: Number,
     items: [mongoose.Schema.Types.Mixed],
-    notes: String
+    notes: String,
+    attachment: mongoose.Schema.Types.Mixed
   },
   { versionKey: false }
 );

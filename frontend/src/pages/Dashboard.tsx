@@ -2,14 +2,11 @@ import React, { useState } from "react";
 import { db } from "@/api/dbClient";
 
 import { useQuery } from "@tanstack/react-query";
-import { PoundSterling, FileText, Clock, CheckCircle, TrendingDown, TrendingUp } from "lucide-react";
+import { PoundSterling, Clock, TrendingDown, TrendingUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatCard from "../components/dashboard/StatCard";
 import RevenueChart from "../components/dashboard/RevenueChart";
 import StatusPieChart from "../components/dashboard/StatusPieChart";
-import InvoiceStatusBadge from "../components/invoices/InvoiceStatusBadge";
-import { format } from "date-fns";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import FinancialBreakdowns from "../components/dashboard/FinancialBreakdowns";
 
 export default function Dashboard() {
@@ -51,8 +48,6 @@ export default function Dashboard() {
     .filter((inv) => (inv.status === "pending" || inv.status === "outstanding") && (inv.invoice_type || "income") === "income")
     .reduce((s, inv) => s + (inv.total_amount || 0), 0);
 
-  const recentInvoices = invoices.slice(0, 5);
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -82,9 +77,9 @@ export default function Dashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title={`${selectedYear} Income`} value={`£${yearlyGrossIncome.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`Net: £${yearlyNetIncome.toFixed(2)} · VAT: £${yearlyIncomeVat.toFixed(2)}`} icon={TrendingUp} color="accent" />
-        <StatCard title={`${selectedYear} Expenses`} value={`£${yearlyGrossExpenses.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`Net: £${yearlyNetExpenses.toFixed(2)} · VAT: £${yearlyExpenseVat.toFixed(2)}`} icon={TrendingDown} color="destructive" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+        <StatCard title={`${selectedYear} Income`} value={`£${yearlyGrossIncome.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`Net: £${yearlyNetIncome.toFixed(2)}\nVAT: £${yearlyIncomeVat.toFixed(2)}`} icon={TrendingUp} color="accent" />
+        <StatCard title={`${selectedYear} Expenses`} value={`£${yearlyGrossExpenses.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`Net: £${yearlyNetExpenses.toFixed(2)}\nVAT: £${yearlyExpenseVat.toFixed(2)}`} icon={TrendingDown} color="destructive" />
         <StatCard title={`${selectedYear} Net Profit`} value={`£${yearlyProfit.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`VAT position: £${vatPosition.toFixed(2)}`} icon={PoundSterling} color="primary" />
         <StatCard title="Pending Income" value={`£${pendingAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`${invoices.filter((i) => (i.status === "pending" || i.status === "outstanding") && (i.invoice_type || "income") === "income").length} invoices`} icon={Clock} color="warning" />
       </div>
@@ -99,43 +94,6 @@ export default function Dashboard() {
 
       {/* Financial Breakdowns */}
       <FinancialBreakdowns invoices={invoices} year={selectedYear} />
-
-      {/* Recent Invoices */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold">Recent Invoices</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentInvoices.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No invoices yet. Create your first invoice to get started.</p>
-          ) : (
-            <div className="space-y-3">
-              {recentInvoices.map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{inv.invoice_number}</p>
-                      <p className="text-xs text-muted-foreground">{inv.client_name || "No client"} · {inv.date ? format(new Date(inv.date), "MMM d") : ""}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {inv.invoice_type === "expense" && (
-                      <span className="text-xs font-medium text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">Expense</span>
-                    )}
-                    <InvoiceStatusBadge status={inv.status} />
-                    <span className={`font-semibold text-sm ${inv.invoice_type === "expense" ? "text-destructive" : ""}`}>
-                      {inv.invoice_type === "expense" ? "−" : ""}£{(inv.total_amount || 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

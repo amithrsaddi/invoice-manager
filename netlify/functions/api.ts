@@ -52,7 +52,8 @@ const invoiceSchema = new mongoose.Schema(
     vat_amount: Number,
     total_amount: Number,
     items: [mongoose.Schema.Types.Mixed],
-    notes: String
+    notes: String,
+    attachment: mongoose.Schema.Types.Mixed
   },
   { versionKey: false }
 );
