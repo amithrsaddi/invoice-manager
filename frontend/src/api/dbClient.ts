@@ -72,6 +72,7 @@ export const db = {
     Supplier: createEntityClient("suppliers"),
     AdditionalExpense: createEntityClient("additional-expenses"),
     RecurringSchedule: createEntityClient("recurring-schedules"),
-    TimesheetState: createEntityClient("timesheet-state")
+    TimesheetState: createEntityClient("timesheet-state"),
+    Profile: createEntityClient("profile")
   }
 };

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, FileText, Users, BarChart2, Repeat, Receipt, PieChart, Menu, X, LogOut, Activity as ActivityIcon, CalendarCheck, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, FileText, Users, BarChart2, Repeat, Receipt, PieChart, Menu, X, LogOut, Activity as ActivityIcon, CalendarCheck, Sun, Moon, UserCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -18,6 +18,7 @@ const navItems = [
   { label: "Reports", path: "/reports", icon: BarChart2 },
   { label: "Activity", path: "/activity", icon: ActivityIcon },
 ];
+const settingsNavItems = [{ label: "Profile", path: "/profile", icon: UserCircle2 }];
 
 export default function AppLayout() {
   const location = useLocation();
@@ -79,6 +80,32 @@ export default function AppLayout() {
             );
           })}
         </nav>
+        <div className="px-4 pb-4">
+          <div className="pt-4 border-t border-sidebar-border">
+            <p className="px-4 pb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/55">
+              Settings
+            </p>
+            <div className="space-y-1">
+              {settingsNavItems.map((item) => {
+                const active = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      active
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
         <div className="p-4 border-t border-sidebar-border flex items-center gap-2">
           <Button
             variant="ghost"
@@ -161,6 +188,33 @@ export default function AppLayout() {
                 );
               })}
             </nav>
+            <div className="px-4 pb-4">
+              <div className="pt-4 border-t border-sidebar-border">
+                <p className="px-4 pb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/55">
+                  Settings
+                </p>
+                <div className="space-y-1">
+                  {settingsNavItems.map((item) => {
+                    const active = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setMobileOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                          active
+                            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent"
+                        }`}
+                      >
+                        <item.icon className="w-5 h-5" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
             <div className="p-4 border-t border-sidebar-border mt-3 space-y-3">
               <Button
                 type="button"

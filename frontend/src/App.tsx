@@ -16,6 +16,7 @@ import Analytics from './pages/Analytics';
 import Activity from './pages/Activity';
 import Timesheets from './pages/Timesheets';
 import Auth from './pages/Auth';
+import Profile from './pages/Profile';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated } = useAuth();
@@ -42,6 +43,7 @@ const AuthenticatedApp = () => {
         <Route path="/schedules" element={<Schedules />} />
         <Route path="/additional-expenses" element={<AdditionalExpenses />} />
         <Route path="/timesheets" element={<Timesheets />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/activity" element={<Activity />} />
       </Route>

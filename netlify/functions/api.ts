@@ -109,6 +109,27 @@ const timesheetStateSchema = new mongoose.Schema(
   },
   { versionKey: false }
 );
+const profileSchema = new mongoose.Schema(
+  {
+    ...baseSchema,
+    user_id: { type: mongoose.Schema.Types.ObjectId, required: true, index: true, unique: true },
+    firstName: String,
+    lastName: String,
+    phone: String,
+    email: String,
+    companyName: String,
+    companyAddressLine1: String,
+    townCity: String,
+    county: String,
+    postcode: String,
+    bankName: String,
+    sortCode: String,
+    accountNumber: String,
+    vatRegistrationNumber: String,
+    companyRegistrationNumber: String
+  },
+  { versionKey: false }
+);
 
 const getModel = (name, schema) => mongoose.models[name] || mongoose.model(name, schema);
 
@@ -119,7 +140,8 @@ const modelMap = {
   suppliers: getModel("Supplier", supplierSchema),
   "additional-expenses": getModel("AdditionalExpense", additionalExpenseSchema),
   "recurring-schedules": getModel("RecurringSchedule", recurringScheduleSchema),
-  "timesheet-state": getModel("TimesheetState", timesheetStateSchema)
+  "timesheet-state": getModel("TimesheetState", timesheetStateSchema),
+  profile: getModel("Profile", profileSchema)
 };
 
 const parseSort = (sort) => {
@@ -218,7 +240,7 @@ export const handler = async (event) => {
     }
 
     if (method === "POST" && !id) {
-      if (route === "timesheet-state") {
+      if (route === "timesheet-state" || route === "profile") {
         const doc = await Model.findOneAndUpdate(
           { user_id: userId },
           { ...(payload || {}), user_id: userId, updated_date: new Date() },

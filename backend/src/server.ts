@@ -99,6 +99,27 @@ const timesheetStateSchema = new mongoose.Schema(
   },
   { versionKey: false }
 );
+const profileSchema = new mongoose.Schema(
+  {
+    ...baseSchema,
+    user_id: { type: mongoose.Schema.Types.ObjectId, required: true, index: true, unique: true },
+    firstName: String,
+    lastName: String,
+    phone: String,
+    email: String,
+    companyName: String,
+    companyAddressLine1: String,
+    townCity: String,
+    county: String,
+    postcode: String,
+    bankName: String,
+    sortCode: String,
+    accountNumber: String,
+    vatRegistrationNumber: String,
+    companyRegistrationNumber: String
+  },
+  { versionKey: false }
+);
 
 const models: Record<string, any> = {
   users: mongoose.model("User", userSchema),
@@ -107,7 +128,8 @@ const models: Record<string, any> = {
   suppliers: mongoose.model("Supplier", supplierSchema),
   "additional-expenses": mongoose.model("AdditionalExpense", additionalExpenseSchema),
   "recurring-schedules": mongoose.model("RecurringSchedule", recurringScheduleSchema),
-  "timesheet-state": mongoose.model("TimesheetState", timesheetStateSchema)
+  "timesheet-state": mongoose.model("TimesheetState", timesheetStateSchema),
+  profile: mongoose.model("Profile", profileSchema)
 };
 
 const mapId = (doc) => {
@@ -192,7 +214,7 @@ Object.entries(models).forEach(([route, Model]) => {
   app.post(`/api/${route}`, async (req, res) => {
     const userId = getUserId(req);
     if (!userId) return res.status(401).json({ error: "Missing user id" });
-    if (route === "timesheet-state") {
+    if (route === "timesheet-state" || route === "profile") {
       const doc = await Model.findOneAndUpdate(
         { user_id: userId },
         { ...req.body, user_id: userId, updated_date: new Date() },
