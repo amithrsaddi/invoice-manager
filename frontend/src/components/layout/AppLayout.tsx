@@ -106,9 +106,30 @@ export default function AppLayout() {
           </h1>
           <span className={`h-2 w-2 rounded-full ${apiHealthy ? "bg-emerald-500" : "bg-rose-500"}`}></span>
         </div>
-        <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent" onClick={() => setMobileOpen(!mobileOpen)}>
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={toggleTheme}
+            className="h-8 w-[76px] rounded-full bg-card border border-border p-1 hover:bg-secondary"
+            aria-label="Toggle light and dark mode"
+          >
+            <span className={`relative flex h-full w-full items-center ${isDark ? "justify-end" : "justify-start"}`}>
+              <span className="absolute left-1 text-muted-foreground">
+                <Sun className="h-[9px] w-[9px]" />
+              </span>
+              <span className="absolute right-1 text-muted-foreground">
+                <Moon className="h-[9px] w-[9px]" />
+              </span>
+              <span className="z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all">
+                {isDark ? <Moon className="h-[9px] w-[9px]" /> : <Sun className="h-[9px] w-[9px]" />}
+              </span>
+            </span>
+          </Button>
+          <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent" onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Nav Overlay */}
@@ -140,6 +161,44 @@ export default function AppLayout() {
                 );
               })}
             </nav>
+            <div className="p-4 border-t border-sidebar-border mt-3 space-y-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={toggleTheme}
+                className="h-8 w-[76px] rounded-full bg-card border border-border p-1 hover:bg-secondary"
+                aria-label="Toggle light and dark mode"
+              >
+                <span className={`relative flex h-full w-full items-center ${isDark ? "justify-end" : "justify-start"}`}>
+                  <span className="absolute left-1 text-muted-foreground">
+                    <Sun className="h-[9px] w-[9px]" />
+                  </span>
+                  <span className="absolute right-1 text-muted-foreground">
+                    <Moon className="h-[9px] w-[9px]" />
+                  </span>
+                  <span className="z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all">
+                    {isDark ? <Moon className="h-[9px] w-[9px]" /> : <Sun className="h-[9px] w-[9px]" />}
+                  </span>
+                </span>
+              </Button>
+              <div>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium whitespace-nowrap ${apiHealthy ? "bg-emerald-500/15 text-emerald-500" : "bg-rose-500/15 text-rose-500"}`}
+                  title={apiHealthy ? "API reachable" : "API unreachable"}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${apiHealthy ? "bg-emerald-500" : "bg-rose-500"}`} />
+                  {apiHealthy ? "API Online" : "API Offline"}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-sidebar-foreground/80 hover:text-destructive hover:bg-sidebar-accent"
+                onClick={logout}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

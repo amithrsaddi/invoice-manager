@@ -4,10 +4,13 @@ import App from '@/App'
 import '@/index.css'
 
 const storedTheme = localStorage.getItem("invoice_manager_theme");
-if (storedTheme === "dark") {
-  document.documentElement.classList.add("dark");
-} else {
+if (storedTheme === "light") {
   document.documentElement.classList.remove("dark");
+} else {
+  document.documentElement.classList.add("dark");
+  if (!storedTheme) {
+    localStorage.setItem("invoice_manager_theme", "dark");
+  }
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

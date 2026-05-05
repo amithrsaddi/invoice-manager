@@ -25,6 +25,8 @@ import { db } from "@/api/dbClient";
 const DEFAULT_WORKING_DAY_HOURS = 8;
 const LEGACY_TIMESHEETS_KEY = "invoice_manager_timesheets_by_month";
 const LEGACY_PUBLIC_HOLIDAYS_KEY = "invoice_manager_public_holidays";
+const USER_ID_KEY = "invoice_manager_user_id";
+const TIMESHEET_CACHE_PREFIX = "invoice_manager_timesheet_state_cache_";
 
 type TimesheetDayEntry = {
   hours: number;
@@ -145,6 +147,33 @@ const readLegacyLocalStorage = (): { timesheets: TimesheetStore; publicHolidays:
   }
 };
 
+const readTimesheetCache = (userId: string | null): { timesheets: TimesheetStore; publicHolidays: PublicHolidayConfig } | null => {
+  if (!userId) return null;
+  try {
+    const raw = localStorage.getItem(`${TIMESHEET_CACHE_PREFIX}${userId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { timesheets?: unknown; publicHolidays?: unknown };
+    return {
+      timesheets: normalizeTimesheetStore(parsed?.timesheets),
+      publicHolidays: normalizePublicHolidays(parsed?.publicHolidays)
+    };
+  } catch {
+    return null;
+  }
+};
+
+const writeTimesheetCache = (
+  userId: string | null,
+  payload: { timesheets: TimesheetStore; publicHolidays: PublicHolidayConfig }
+) => {
+  if (!userId) return;
+  try {
+    localStorage.setItem(`${TIMESHEET_CACHE_PREFIX}${userId}`, JSON.stringify(payload));
+  } catch {
+    // no-op: storage failures should not block UI
+  }
+};
+
 export default function Timesheets() {
   const { data: timesheetStateDocs = [], isFetched: isFetchedTimesheetState } = useQuery({
     queryKey: ["timesheet-state"],
@@ -165,18 +194,31 @@ export default function Timesheets() {
   const [newHolidayIsWorkingDay, setNewHolidayIsWorkingDay] = useState(false);
   const hasHydratedFromBackend = useRef(false);
   const timesheetStateIdRef = useRef<string | null>(null);
+  const userIdRef = useRef<string | null>(localStorage.getItem(USER_ID_KEY));
 
   useEffect(() => {
     if (!isFetchedTimesheetState || hasHydratedFromBackend.current) return;
     const stateDoc = timesheetStateDocs[0];
     if (stateDoc) {
       timesheetStateIdRef.current = stateDoc.id;
-      setTimesheets(normalizeTimesheetStore(stateDoc.timesheets));
-      setPublicHolidays(normalizePublicHolidays(stateDoc.publicHolidays));
+      const normalizedTimesheets = normalizeTimesheetStore(stateDoc.timesheets);
+      const normalizedPublicHolidays = normalizePublicHolidays(stateDoc.publicHolidays);
+      setTimesheets(normalizedTimesheets);
+      setPublicHolidays(normalizedPublicHolidays);
+      writeTimesheetCache(userIdRef.current, {
+        timesheets: normalizedTimesheets,
+        publicHolidays: normalizedPublicHolidays
+      });
     } else {
-      const legacy = readLegacyLocalStorage();
-      setTimesheets(legacy.timesheets);
-      setPublicHolidays(legacy.publicHolidays);
+      const cache = readTimesheetCache(userIdRef.current);
+      if (cache) {
+        setTimesheets(cache.timesheets);
+        setPublicHolidays(cache.publicHolidays);
+      } else {
+        const legacy = readLegacyLocalStorage();
+        setTimesheets(legacy.timesheets);
+        setPublicHolidays(legacy.publicHolidays);
+      }
     }
     hasHydratedFromBackend.current = true;
   }, [isFetchedTimesheetState, timesheetStateDocs]);
@@ -340,11 +382,12 @@ export default function Timesheets() {
     if (!hasHydratedFromBackend.current) return;
     const timeoutId = setTimeout(async () => {
       const payload = { timesheets, publicHolidays };
+      writeTimesheetCache(userIdRef.current, payload);
       try {
         if (timesheetStateIdRef.current) {
           await db.entities.TimesheetState.update(timesheetStateIdRef.current, payload);
         } else {
-          const created = await db.entities.TimesheetState.create(payload);
+          const created = (await db.entities.TimesheetState.create(payload)) as { id?: string } | null;
           if (created?.id) timesheetStateIdRef.current = created.id;
         }
       } catch (error) {
