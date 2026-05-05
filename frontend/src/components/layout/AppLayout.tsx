@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, FileText, Users, BarChart2, Repeat, Receipt, PieChart, Menu, X, LogOut, Activity as ActivityIcon } from "lucide-react";
+import { LayoutDashboard, FileText, Users, BarChart2, Repeat, Receipt, PieChart, Menu, X, LogOut, Activity as ActivityIcon, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -13,6 +13,7 @@ const navItems = [
   { label: "Additional Expenses", path: "/additional-expenses", icon: Receipt },
   { label: "Contacts", path: "/contacts", icon: Users },
   { label: "Schedules", path: "/schedules", icon: Repeat },
+  { label: "Timesheets", path: "/timesheets", icon: CalendarCheck },
   { label: "Analytics", path: "/analytics", icon: PieChart },
   { label: "Reports", path: "/reports", icon: BarChart2 },
   { label: "Activity", path: "/activity", icon: ActivityIcon },
@@ -37,12 +38,12 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen flex bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 bg-card border-r border-border fixed inset-y-0 z-30">
-        <div className="p-6 border-b border-border">
-          <h1 className="text-xl font-bold text-foreground tracking-tight">
+      <aside className="hidden lg:flex flex-col w-64 bg-sidebar border-r border-sidebar-border fixed inset-y-0 z-30">
+        <div className="p-6 border-b border-sidebar-border">
+          <h1 className="text-xl font-bold text-sidebar-foreground tracking-tight">
             Invoice Manager
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">Management Suite</p>
+          <p className="text-xs text-sidebar-foreground/70 mt-1">Management Suite</p>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
@@ -53,8 +54,8 @@ export default function AppLayout() {
                 to={item.path}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                   active
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
+                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
               >
                 <item.icon className="w-5 h-5" />
@@ -63,10 +64,10 @@ export default function AppLayout() {
             );
           })}
         </nav>
-        <div className="p-4 border-t border-border flex items-center gap-2">
+        <div className="p-4 border-t border-sidebar-border flex items-center gap-2">
           <Button
             variant="ghost"
-            className="flex-1 min-w-0 justify-start text-muted-foreground hover:text-destructive"
+            className="flex-1 min-w-0 justify-start text-sidebar-foreground/80 hover:text-destructive hover:bg-sidebar-accent"
             onClick={logout}
           >
             <LogOut className="w-4 h-4 mr-2 shrink-0" />
@@ -83,14 +84,14 @@ export default function AppLayout() {
       </aside>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 inset-x-0 z-40 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 inset-x-0 z-40 bg-sidebar border-b border-sidebar-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold text-foreground">
+          <h1 className="text-lg font-bold text-sidebar-foreground">
             Invoice Manager
           </h1>
           <span className={`h-2 w-2 rounded-full ${apiHealthy ? "bg-emerald-500" : "bg-rose-500"}`}></span>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)}>
+        <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent" onClick={() => setMobileOpen(!mobileOpen)}>
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </Button>
       </div>
@@ -102,7 +103,7 @@ export default function AppLayout() {
             initial={{ opacity: 0, x: -300 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -300 }}
-            className="lg:hidden fixed inset-0 z-30 bg-card/95 backdrop-blur-sm pt-16 overflow-y-auto"
+            className="lg:hidden fixed inset-0 z-30 bg-sidebar/95 backdrop-blur-sm pt-16 overflow-y-auto"
           >
             <nav className="p-4 space-y-1">
               {navItems.map((item) => {
@@ -114,8 +115,8 @@ export default function AppLayout() {
                     onClick={() => setMobileOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                       active
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-secondary"
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent"
                     }`}
                   >
                     <item.icon className="w-5 h-5" />

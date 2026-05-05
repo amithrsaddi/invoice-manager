@@ -3,10 +3,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const STATUS_COLORS = {
-  outstanding: "hsl(var(--chart-3))",
-  paid: "hsl(var(--accent))",
-  pending: "hsl(var(--chart-1))",
-  cleared: "hsl(var(--chart-5))",
+  outstanding: "#ef4444", // red
+  paid: "#22c55e", // green
+  pending: "#f59e0b", // amber
+  cleared: "#8b5cf6", // violet
 };
 
 export default function StatusPieChart({ invoices }) {
@@ -39,7 +39,7 @@ export default function StatusPieChart({ invoices }) {
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={4} dataKey="value">
+              <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={4} stroke="#ffffff" strokeWidth={2} dataKey="value">
                 {data.map((entry) => (
                   <Cell key={entry.key} fill={STATUS_COLORS[entry.key]} />
                 ))}

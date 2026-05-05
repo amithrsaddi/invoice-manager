@@ -90,6 +90,15 @@ const recurringScheduleSchema = new mongoose.Schema(
   },
   { versionKey: false }
 );
+const timesheetStateSchema = new mongoose.Schema(
+  {
+    ...baseSchema,
+    user_id: { type: mongoose.Schema.Types.ObjectId, required: true, index: true, unique: true },
+    timesheets: mongoose.Schema.Types.Mixed,
+    publicHolidays: mongoose.Schema.Types.Mixed
+  },
+  { versionKey: false }
+);
 
 const models: Record<string, any> = {
   users: mongoose.model("User", userSchema),
@@ -97,7 +106,8 @@ const models: Record<string, any> = {
   clients: mongoose.model("Client", clientSchema),
   suppliers: mongoose.model("Supplier", supplierSchema),
   "additional-expenses": mongoose.model("AdditionalExpense", additionalExpenseSchema),
-  "recurring-schedules": mongoose.model("RecurringSchedule", recurringScheduleSchema)
+  "recurring-schedules": mongoose.model("RecurringSchedule", recurringScheduleSchema),
+  "timesheet-state": mongoose.model("TimesheetState", timesheetStateSchema)
 };
 
 const mapId = (doc) => {
@@ -182,6 +192,14 @@ Object.entries(models).forEach(([route, Model]) => {
   app.post(`/api/${route}`, async (req, res) => {
     const userId = getUserId(req);
     if (!userId) return res.status(401).json({ error: "Missing user id" });
+    if (route === "timesheet-state") {
+      const doc = await Model.findOneAndUpdate(
+        { user_id: userId },
+        { ...req.body, user_id: userId, updated_date: new Date() },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      );
+      return res.status(201).json(mapId(doc));
+    }
     const doc = await Model.create({ ...req.body, user_id: userId });
     res.status(201).json(mapId(doc));
   });
