@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, FileText, Users, BarChart2, Repeat, Receipt, PieChart, Menu, X, LogOut, Activity as ActivityIcon, CalendarCheck } from "lucide-react";
+import { LayoutDashboard, FileText, Users, BarChart2, Repeat, Receipt, PieChart, Menu, X, LogOut, Activity as ActivityIcon, CalendarCheck, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -22,6 +22,7 @@ const navItems = [
 export default function AppLayout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
   const { logout } = useAuth();
   const { data: apiHealthy = false } = useQuery({
     queryKey: ["api-health"],
@@ -35,15 +36,29 @@ export default function AppLayout() {
     retry: 0
   });
 
+  const toggleTheme = () => {
+    const nextIsDark = !isDark;
+    setIsDark(nextIsDark);
+    if (nextIsDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("invoice_manager_theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("invoice_manager_theme", "light");
+    }
+  };
+
   return (
     <div className="min-h-screen flex bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 bg-sidebar border-r border-sidebar-border fixed inset-y-0 z-30">
+      <aside className="hidden lg:flex flex-col w-72 bg-sidebar border-r border-sidebar-border fixed inset-y-0 z-30">
         <div className="p-6 border-b border-sidebar-border">
-          <h1 className="text-xl font-bold text-sidebar-foreground tracking-tight">
-            Invoice Manager
-          </h1>
-          <p className="text-xs text-sidebar-foreground/70 mt-1">Management Suite</p>
+          <div>
+            <h1 className="text-xl font-bold text-sidebar-foreground tracking-tight">
+              Invoice Manager
+            </h1>
+            <p className="text-xs text-sidebar-foreground/70 mt-1">Management Suite</p>
+          </div>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
@@ -74,7 +89,7 @@ export default function AppLayout() {
             Sign Out
           </Button>
           <span
-            className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium whitespace-nowrap ${apiHealthy ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}
+            className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium whitespace-nowrap ${apiHealthy ? "bg-emerald-500/15 text-emerald-500" : "bg-rose-500/15 text-rose-500"}`}
             title={apiHealthy ? "API reachable" : "API unreachable"}
           >
             <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${apiHealthy ? "bg-emerald-500" : "bg-rose-500"}`} />
@@ -130,8 +145,29 @@ export default function AppLayout() {
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64 pt-16 lg:pt-0 min-w-0">
+      <main className="flex-1 lg:ml-72 pt-16 lg:pt-0 min-w-0">
         <div className="p-4 md:p-8 max-w-7xl mx-auto overflow-x-hidden">
+          <div className="hidden lg:flex justify-end mb-3">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={toggleTheme}
+              className="h-8 w-[76px] rounded-full bg-card border border-border p-1 hover:bg-secondary"
+              aria-label="Toggle light and dark mode"
+            >
+              <span className={`relative flex h-full w-full items-center ${isDark ? "justify-end" : "justify-start"}`}>
+                <span className="absolute left-1 text-muted-foreground">
+                  <Sun className="h-[9px] w-[9px]" />
+                </span>
+                <span className="absolute right-1 text-muted-foreground">
+                  <Moon className="h-[9px] w-[9px]" />
+                </span>
+                <span className="z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all">
+                  {isDark ? <Moon className="h-[9px] w-[9px]" /> : <Sun className="h-[9px] w-[9px]" />}
+                </span>
+              </span>
+            </Button>
+          </div>
           <Outlet />
         </div>
       </main>

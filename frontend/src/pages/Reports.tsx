@@ -433,19 +433,19 @@ export default function Reports() {
           </div>
         </Card>
 
-        <Card className={`p-5 sm:col-span-2 lg:col-span-1 border-2 ${vatBalance >= 0 ? "border-amber-300 bg-amber-50/50" : "border-emerald-300 bg-emerald-50/50"}`}>
+        <Card className={`p-5 sm:col-span-2 lg:col-span-1 border-2 ${vatBalance >= 0 ? "border-amber-300 bg-amber-50/50 dark:border-amber-500/40 dark:bg-amber-500/10" : "border-emerald-300 bg-emerald-50/50 dark:border-emerald-500/40 dark:bg-emerald-500/10"}`}>
           <div className="flex items-center gap-3 mb-3">
-            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${vatBalance >= 0 ? "bg-amber-100" : "bg-emerald-100"}`}>
-              <Scale className={`w-5 h-5 ${vatBalance >= 0 ? "text-amber-600" : "text-emerald-600"}`} />
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${vatBalance >= 0 ? "bg-amber-100 dark:bg-amber-500/20" : "bg-emerald-100 dark:bg-emerald-500/20"}`}>
+              <Scale className={`w-5 h-5 ${vatBalance >= 0 ? "text-amber-600 dark:text-amber-300" : "text-emerald-600 dark:text-emerald-300"}`} />
             </div>
-            <p className="text-sm font-medium text-muted-foreground">VAT Position</p>
+            <p className="text-sm font-medium text-muted-foreground dark:text-foreground/85">VAT Position</p>
           </div>
           <div className="space-y-1.5">
-            <div className="flex justify-between text-sm"><span className="text-muted-foreground">VAT Collected</span><span className="font-semibold">{fmt(vatCollected)}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-muted-foreground">VAT Paid</span><span className="font-semibold">− {fmt(vatPaid)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-muted-foreground dark:text-foreground/75">VAT Collected</span><span className="font-semibold dark:text-foreground">{fmt(vatCollected)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-muted-foreground dark:text-foreground/75">VAT Paid</span><span className="font-semibold dark:text-foreground">− {fmt(vatPaid)}</span></div>
             <div className="flex justify-between text-sm border-t border-border pt-1.5 mt-1.5">
-              <span className="font-semibold">{vatBalance >= 0 ? "Owed to HMRC" : "Reclaimable"}</span>
-              <span className={`font-bold text-base ${vatBalance >= 0 ? "text-amber-700" : "text-emerald-700"}`}>{fmt(Math.abs(vatBalance))}</span>
+              <span className="font-semibold dark:text-foreground">{vatBalance >= 0 ? "Owed to HMRC" : "Reclaimable"}</span>
+              <span className={`font-bold text-base ${vatBalance >= 0 ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}`}>{fmt(Math.abs(vatBalance))}</span>
             </div>
           </div>
         </Card>
@@ -468,7 +468,7 @@ export default function Reports() {
           <Scale className="w-5 h-5 text-muted-foreground" />
           <h2 className="text-xl font-bold tracking-tight">Combined VAT Position</h2>
         </div>
-        <div className={`rounded-xl border-2 p-5 ${combinedVatBalance >= 0 ? "border-amber-300 bg-amber-50/50" : "border-emerald-300 bg-emerald-50/50"}`}>
+        <div className={`rounded-xl border-2 p-5 ${combinedVatBalance >= 0 ? "border-amber-300 bg-amber-50/50 dark:border-amber-500/40 dark:bg-amber-500/10" : "border-emerald-300 bg-emerald-50/50 dark:border-emerald-500/40 dark:bg-emerald-500/10"}`}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div className="space-y-1">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">VAT Collected (Sales)</p>
@@ -482,14 +482,14 @@ export default function Reports() {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">VAT from Add. Expenses</p>
               <p className="text-xl font-bold text-destructive">− {fmt(aeVatReclaimable)}</p>
             </div>
-            <div className={`space-y-1 p-3 rounded-lg ${combinedVatBalance >= 0 ? "bg-amber-100" : "bg-emerald-100"}`}>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            <div className={`space-y-1 p-3 rounded-lg ${combinedVatBalance >= 0 ? "bg-amber-100 dark:bg-amber-500/20" : "bg-emerald-100 dark:bg-emerald-500/20"}`}>
+              <p className="text-xs font-semibold text-muted-foreground dark:text-foreground/75 uppercase tracking-wide">
                 {combinedVatBalance >= 0 ? "Owed to HMRC" : "Reclaimable"}
               </p>
-              <p className={`text-2xl font-black ${combinedVatBalance >= 0 ? "text-amber-700" : "text-emerald-700"}`}>
+              <p className={`text-2xl font-black ${combinedVatBalance >= 0 ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}`}>
                 {fmt(Math.abs(combinedVatBalance))}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground dark:text-foreground/65">
                 {fmt(vatCollected)} − {fmt(vatPaid)} − {fmt(aeVatReclaimable)}
               </p>
             </div>
