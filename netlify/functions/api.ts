@@ -100,6 +100,16 @@ const recurringScheduleSchema = new mongoose.Schema(
   { versionKey: false }
 );
 
+const timesheetStateSchema = new mongoose.Schema(
+  {
+    ...baseSchema,
+    user_id: { type: mongoose.Schema.Types.ObjectId, required: true, index: true, unique: true },
+    timesheets: mongoose.Schema.Types.Mixed,
+    publicHolidays: mongoose.Schema.Types.Mixed
+  },
+  { versionKey: false }
+);
+
 const getModel = (name, schema) => mongoose.models[name] || mongoose.model(name, schema);
 
 const modelMap = {
@@ -108,7 +118,8 @@ const modelMap = {
   clients: getModel("Client", clientSchema),
   suppliers: getModel("Supplier", supplierSchema),
   "additional-expenses": getModel("AdditionalExpense", additionalExpenseSchema),
-  "recurring-schedules": getModel("RecurringSchedule", recurringScheduleSchema)
+  "recurring-schedules": getModel("RecurringSchedule", recurringScheduleSchema),
+  "timesheet-state": getModel("TimesheetState", timesheetStateSchema)
 };
 
 const parseSort = (sort) => {
@@ -207,6 +218,14 @@ export const handler = async (event) => {
     }
 
     if (method === "POST" && !id) {
+      if (route === "timesheet-state") {
+        const doc = await Model.findOneAndUpdate(
+          { user_id: userId },
+          { ...(payload || {}), user_id: userId, updated_date: new Date() },
+          { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
+        return json(201, mapId(doc));
+      }
       const doc = await Model.create({ ...(payload || {}), user_id: userId });
       return json(201, mapId(doc));
     }
