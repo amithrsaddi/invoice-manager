@@ -73,7 +73,7 @@ export function downloadPDF(invoices, dateFrom, dateTo) {
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Invoices Export</title>
+  <title>Invoice Manager — Export</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1e293b; padding: 32px; }
@@ -92,7 +92,7 @@ export function downloadPDF(invoices, dateFrom, dateTo) {
   </style>
 </head>
 <body>
-  <h1>InvoiceFlow — Export</h1>
+  <h1>Invoice Manager — Export</h1>
   <p class="subtitle">Date range: ${rangeLabel} &nbsp;·&nbsp; ${invoices.length} invoice${invoices.length !== 1 ? "s" : ""} &nbsp;·&nbsp; Generated ${format(new Date(), "dd MMM yyyy HH:mm")}</p>
   <table>
     <thead>

@@ -65,6 +65,8 @@ const QUARTERS = [
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export default function FinancialBreakdowns({ invoices, year }) {
+  const isAllTime = year === "all";
+
   // For Q1 (Dec, Jan, Feb): Dec belongs to prev year
   function invoicesInMonth(month) {
     return invoices.filter((inv) => {
@@ -83,14 +85,19 @@ export default function FinancialBreakdowns({ invoices, year }) {
     return months.flatMap((m) => invoicesInMonth(m));
   }
 
-  const yearInvoices = invoices.filter((inv) => new Date(inv.date).getFullYear() === year);
+  const yearInvoices = isAllTime ? invoices : invoices.filter((inv) => new Date(inv.date).getFullYear() === year);
+
+  const titleSuffix = isAllTime ? "All Years" : year;
 
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">Financial Breakdowns — {year}</CardTitle>
+        <CardTitle className="text-lg font-semibold">Financial Breakdowns — {titleSuffix}</CardTitle>
       </CardHeader>
       <CardContent>
+        {isAllTime ? (
+          <BreakdownRow label="All Years" stats={calcStats(invoices)} />
+        ) : (
         <Tabs defaultValue="year">
           <TabsList className="mb-4">
             <TabsTrigger value="year">Year</TabsTrigger>
@@ -121,6 +128,7 @@ export default function FinancialBreakdowns({ invoices, year }) {
             </div>
           </TabsContent>
         </Tabs>
+        )}
       </CardContent>
     </Card>
   );

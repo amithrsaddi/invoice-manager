@@ -58,26 +58,6 @@ function getQuickPresetDates(preset) {
   return { from: "", to: "" };
 }
 
-function formatQuickPresetLabel(preset) {
-  if (!preset || preset === REPORTS_QUICK_PLACEHOLDER) return "";
-  if (preset === "custom") return "Custom range";
-  if (preset === "this_year") return `This calendar year (${currentYear})`;
-  if (preset === "last_year") return `Last calendar year (${currentYear - 1})`;
-  if (/^q[1-4]$/.test(preset)) return `${getCalendarQuarterLabel(`cq${preset[1]}`)} (${currentYear})`;
-  if (/^fq[1-4]$/.test(preset)) return `${getFinQuarterLabel(preset)} (${currentYear})`;
-  if (preset.includes("~")) {
-    const [yearKey, qv] = preset.split("~");
-    const yl = formatYearFilterLabel(yearKey);
-    if (qv.startsWith("cq") && /^f-/.test(yearKey)) {
-      return `${yl} · ${FY_APR_MAR_QUARTER_LABELS[qv] || qv}`;
-    }
-    if (qv.startsWith("cq")) return `${yl} · ${getCalendarQuarterLabel(qv)}`;
-    if (qv.startsWith("fq")) return `${yl} · ${getFinQuarterLabel(qv)}`;
-  }
-  if (/^(c|f)-\d{4}$/.test(preset)) return formatYearFilterLabel(preset);
-  return preset;
-}
-
 function downloadVATReport(invoices, dateFrom, dateTo) {
   const settled = invoices.filter((inv) => inv.status === "paid" || inv.status === "cleared");
   const income = settled.filter((inv) => (inv.invoice_type || "income") === "income");
@@ -116,7 +96,7 @@ function downloadVATReport(invoices, dateFrom, dateTo) {
     </tr>`).join("");
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
-  <title>VAT Return Summary</title>
+  <title>Invoice Manager — VAT Return Summary</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:'Segoe UI',Arial,sans-serif; font-size:12px; color:#1e293b; padding:32px; }
@@ -140,7 +120,7 @@ function downloadVATReport(invoices, dateFrom, dateTo) {
     @media print { body { padding:16px; } }
   </style>
   </head><body>
-  <h1>InvoiceFlow — VAT Return Summary</h1>
+  <h1>Invoice Manager — VAT Return Summary</h1>
   <p class="subtitle">Period: ${rangeLabel} &nbsp;·&nbsp; Generated ${format(new Date(), "dd MMM yyyy HH:mm")}</p>
 
   <div class="summary-grid">
@@ -258,6 +238,10 @@ export default function Reports() {
     setDateTo(to);
   };
 
+  /** Keeps Radix Select value in sync when dates are set but preset was cleared (avoids empty trigger). */
+  const quickSelectValue =
+    preset || (dateFrom || dateTo ? "custom" : REPORTS_QUICK_PLACEHOLDER);
+
   const filtered = useMemo(() => {
     return invoices.filter((inv) => {
       if (dateFrom && inv.date < dateFrom) return false;
@@ -322,11 +306,9 @@ export default function Reports() {
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Quick Select</Label>
-            <Select value={preset || REPORTS_QUICK_PLACEHOLDER} onValueChange={handlePreset}>
+            <Select value={quickSelectValue} onValueChange={handlePreset}>
               <SelectTrigger>
-                <SelectValue placeholder="Choose period…">
-                  {preset ? formatQuickPresetLabel(preset) : undefined}
-                </SelectValue>
+                <SelectValue placeholder="Choose period…" />
               </SelectTrigger>
               <SelectContent className="max-h-[min(24rem,70vh)]">
                 <SelectItem value={REPORTS_QUICK_PLACEHOLDER}>Choose period…</SelectItem>

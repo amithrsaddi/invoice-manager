@@ -16,44 +16,44 @@ function formatCount(n, singular, plural) {
   return `${n} ${n === 1 ? singular : plural}`;
 }
 
-function StatusRow({ label, invoices }) {
+function statusCountLabel(invoices) {
+  const income = invoices.filter((inv) => (inv.invoice_type || "income") === "income");
+  const expense = invoices.filter((inv) => inv.invoice_type === "expense");
+  const ic = income.length;
+  const ec = expense.length;
+  if (ic > 0 && ec > 0) {
+    return `${formatCount(ic, "invoice", "invoices")} · ${formatCount(ec, "expense", "expenses")}`;
+  }
+  if (ic > 0) return formatCount(ic, "invoice", "invoices");
+  if (ec > 0) return formatCount(ec, "expense", "expenses");
+  return "0 records";
+}
+
+function StatusTableRow({ label, invoices }) {
   const total = invoices.reduce((s, inv) => s + (inv.total_amount || 0), 0);
   const income = invoices.filter((inv) => (inv.invoice_type || "income") === "income");
   const expense = invoices.filter((inv) => inv.invoice_type === "expense");
   const incomeTotal = income.reduce((s, inv) => s + (inv.total_amount || 0), 0);
   const expenseTotal = expense.reduce((s, inv) => s + (inv.total_amount || 0), 0);
-  const ic = income.length;
-  const ec = expense.length;
-  const countLabel =
-    ic > 0 && ec > 0
-      ? `${formatCount(ic, "invoice", "invoices")} · ${formatCount(ec, "expense", "expenses")}`
-      : ic > 0
-        ? formatCount(ic, "invoice", "invoices")
-        : ec > 0
-          ? formatCount(ec, "expense", "expenses")
-          : "0 records";
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
-      <div className="flex items-center gap-3 min-w-0">
-        <Badge variant="outline" className={`capitalize shrink-0 ${STATUS_COLORS[label] || ""}`}>{label}</Badge>
-        <span className="text-sm text-muted-foreground">{countLabel}</span>
-      </div>
-      <div className="flex gap-6 text-sm text-right shrink-0">
-        <div>
-          <p className="text-xs text-muted-foreground">Income</p>
-          <p className="font-medium text-accent">£{incomeTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Expense</p>
-          <p className="font-medium text-destructive">£{expenseTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Total</p>
-          <p className="font-semibold">£{total.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
-        </div>
-      </div>
-    </div>
+    <tr className="border-b border-border last:border-0">
+      <td className="py-3 pr-4 align-middle">
+        <Badge variant="outline" className={`capitalize ${STATUS_COLORS[label] || ""}`}>{label}</Badge>
+      </td>
+      <td className="py-3 pr-4 align-middle text-sm text-muted-foreground min-w-[8rem]">
+        {statusCountLabel(invoices)}
+      </td>
+      <td className="py-3 px-2 align-middle text-right font-medium text-accent tabular-nums">
+        £{incomeTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+      </td>
+      <td className="py-3 px-2 align-middle text-right font-medium text-destructive tabular-nums">
+        £{expenseTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+      </td>
+      <td className="py-3 pl-2 align-middle text-right font-semibold tabular-nums">
+        £{total.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+      </td>
+    </tr>
   );
 }
 
@@ -80,7 +80,7 @@ export default function StatusOverview({ invoices }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="all">All Years</SelectItem>
               {years.map((y) => (
                 <SelectItem key={y} value={String(y)}>{y}</SelectItem>
               ))}
@@ -106,14 +106,27 @@ export default function StatusOverview({ invoices }) {
         </div>
 
         {/* Per-status breakdown */}
-        <div>
-          {STATUSES.map((status) => (
-            <StatusRow
-              key={status}
-              label={status}
-              invoices={filtered.filter((inv) => inv.status === status)}
-            />
-          ))}
+        <div className="overflow-x-auto -mx-1 px-1">
+          <table className="w-full min-w-[32rem] text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th scope="col" className="text-left font-semibold text-muted-foreground py-2 pr-4">Status</th>
+                <th scope="col" className="text-left font-semibold text-muted-foreground py-2 pr-4">Records</th>
+                <th scope="col" className="text-right font-semibold text-muted-foreground py-2 px-2">Income</th>
+                <th scope="col" className="text-right font-semibold text-muted-foreground py-2 px-2">Expense</th>
+                <th scope="col" className="text-right font-semibold text-muted-foreground py-2 pl-2">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {STATUSES.map((status) => (
+                <StatusTableRow
+                  key={status}
+                  label={status}
+                  invoices={filtered.filter((inv) => inv.status === status)}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* Invoice count progress */}

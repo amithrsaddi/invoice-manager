@@ -9,9 +9,11 @@ import RevenueChart from "../components/dashboard/RevenueChart";
 import StatusPieChart from "../components/dashboard/StatusPieChart";
 import FinancialBreakdowns from "../components/dashboard/FinancialBreakdowns";
 
+type DashboardPeriod = number | "all";
+
 export default function Dashboard() {
   const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedYear, setSelectedYear] = useState<DashboardPeriod>(currentYear);
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
   const { data: invoices = [], isLoading } = useQuery({
@@ -21,7 +23,12 @@ export default function Dashboard() {
 
   const isSettled = (inv) => inv.status === "paid" || inv.status === "cleared";
 
-  const yearInvoices = invoices.filter((inv) => new Date(inv.date).getFullYear() === selectedYear);
+  const periodInvoices =
+    selectedYear === "all"
+      ? invoices
+      : invoices.filter((inv) => new Date(inv.date).getFullYear() === selectedYear);
+
+  const yearInvoices = periodInvoices;
   const yearSettled = yearInvoices.filter(isSettled);
 
   // Income (invoices I issued)
@@ -41,12 +48,13 @@ export default function Dashboard() {
   // VAT position = VAT collected on income minus VAT paid on expenses
   const vatPosition = yearlyIncomeVat - yearlyExpenseVat;
 
-  // All-time
-  const allTimeIncome = invoices.filter((inv) => isSettled(inv) && (inv.invoice_type || "income") === "income").reduce((s, inv) => s + (inv.total_amount || 0), 0);
+  const isPendingIncome = (inv) =>
+    (inv.status === "pending" || inv.status === "outstanding") && (inv.invoice_type || "income") === "income";
 
-  const pendingAmount = invoices
-    .filter((inv) => (inv.status === "pending" || inv.status === "outstanding") && (inv.invoice_type || "income") === "income")
-    .reduce((s, inv) => s + (inv.total_amount || 0), 0);
+  const pendingList = periodInvoices.filter(isPendingIncome);
+  const pendingAmount = pendingList.reduce((s, inv) => s + (inv.total_amount || 0), 0);
+
+  const periodLabel = selectedYear === "all" ? "All Years" : String(selectedYear);
 
   if (isLoading) {
     return (
@@ -64,11 +72,15 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground mt-1">Overview of your invoicing activity</p>
         </div>
-        <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
-          <SelectTrigger className="w-32">
+        <Select
+          value={selectedYear === "all" ? "all" : String(selectedYear)}
+          onValueChange={(v) => setSelectedYear(v === "all" ? "all" : Number(v))}
+        >
+          <SelectTrigger className="w-[9.5rem]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="all">All Years</SelectItem>
             {years.map((y) => (
               <SelectItem key={y} value={String(y)}>{y}</SelectItem>
             ))}
@@ -78,10 +90,10 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
-        <StatCard title={`${selectedYear} Income`} value={`£${yearlyGrossIncome.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`Net: £${yearlyNetIncome.toFixed(2)}\nVAT: £${yearlyIncomeVat.toFixed(2)}`} icon={TrendingUp} color="accent" />
-        <StatCard title={`${selectedYear} Expenses`} value={`£${yearlyGrossExpenses.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`Net: £${yearlyNetExpenses.toFixed(2)}\nVAT: £${yearlyExpenseVat.toFixed(2)}`} icon={TrendingDown} color="destructive" />
-        <StatCard title={`${selectedYear} Net Profit`} value={`£${yearlyProfit.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`VAT position: £${vatPosition.toFixed(2)}`} icon={PoundSterling} color="primary" />
-        <StatCard title="Pending Income" value={`£${pendingAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`${invoices.filter((i) => (i.status === "pending" || i.status === "outstanding") && (i.invoice_type || "income") === "income").length} invoices`} icon={Clock} color="warning" />
+        <StatCard title={`${periodLabel} Income`} value={`£${yearlyGrossIncome.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`Net: £${yearlyNetIncome.toFixed(2)}\nVAT: £${yearlyIncomeVat.toFixed(2)}`} icon={TrendingUp} color="accent" />
+        <StatCard title={`${periodLabel} Expenses`} value={`£${yearlyGrossExpenses.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`Net: £${yearlyNetExpenses.toFixed(2)}\nVAT: £${yearlyExpenseVat.toFixed(2)}`} icon={TrendingDown} color="destructive" />
+        <StatCard title={`${periodLabel} Net Profit`} value={`£${yearlyProfit.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`VAT position: £${vatPosition.toFixed(2)}`} icon={PoundSterling} color="primary" />
+        <StatCard title="Pending Income" value={`£${pendingAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}`} subtitle={`${pendingList.length} invoices`} icon={Clock} color="warning" />
       </div>
 
       {/* Charts */}
@@ -89,7 +101,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2">
           <RevenueChart invoices={invoices} year={selectedYear} />
         </div>
-        <StatusPieChart invoices={invoices} />
+        <StatusPieChart invoices={periodInvoices} />
       </div>
 
       {/* Financial Breakdowns */}
