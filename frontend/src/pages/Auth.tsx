@@ -53,7 +53,7 @@ export default function Auth() {
           type="button"
           variant="ghost"
           onClick={toggleTheme}
-          className="h-8 w-[76px] rounded-full bg-card border border-border p-1 hover:bg-secondary"
+          className="h-7 w-[76px] rounded-full bg-card border border-border p-1 hover:bg-secondary"
           aria-label="Toggle light and dark mode"
         >
           <span className={`relative flex h-full w-full items-center ${isDark ? "justify-end" : "justify-start"}`}>
@@ -63,7 +63,7 @@ export default function Auth() {
             <span className="absolute right-1 text-muted-foreground">
               <Moon className="h-[9px] w-[9px]" />
             </span>
-            <span className="z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all">
+            <span className="z-10 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all">
               {isDark ? <Moon className="h-[9px] w-[9px]" /> : <Sun className="h-[9px] w-[9px]" />}
             </span>
           </span>
