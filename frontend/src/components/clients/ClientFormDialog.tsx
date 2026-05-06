@@ -12,7 +12,18 @@ export default function ClientFormDialog({ open, onClose, client }) {
   const queryClient = useQueryClient();
   const isEdit = !!client;
 
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    addressLine1: "",
+    addressLine2: "",
+    townCity: "",
+    county: "",
+    postcode: "",
+    notes: ""
+  });
 
   useEffect(() => {
     if (client) {
@@ -21,18 +32,45 @@ export default function ClientFormDialog({ open, onClose, client }) {
         email: client.email || "",
         phone: client.phone || "",
         address: client.address || "",
+        addressLine1: client.addressLine1 || "",
+        addressLine2: client.addressLine2 || "",
+        townCity: client.townCity || "",
+        county: client.county || "",
+        postcode: client.postcode || "",
         notes: client.notes || "",
       });
     } else {
-      setForm({ name: "", email: "", phone: "", address: "", notes: "" });
+      setForm({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        addressLine1: "",
+        addressLine2: "",
+        townCity: "",
+        county: "",
+        postcode: "",
+        notes: ""
+      });
     }
   }, [client, open]);
 
   const handleSave = async () => {
+    const formattedAddress = [
+      form.addressLine1,
+      form.addressLine2,
+      form.townCity,
+      form.county,
+      form.postcode
+    ]
+      .map((part) => String(part || "").trim())
+      .filter(Boolean)
+      .join(", ");
+    const payload = { ...form, address: formattedAddress || form.address || "" };
     if (isEdit) {
-      await db.entities.Client.update(client.id, form);
+      await db.entities.Client.update(client.id, payload);
     } else {
-      await db.entities.Client.create(form);
+      await db.entities.Client.create(payload);
     }
     queryClient.invalidateQueries({ queryKey: ["clients"] });
     onClose();
@@ -40,7 +78,7 @@ export default function ClientFormDialog({ open, onClose, client }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Client" : "Add Client"}</DialogTitle>
         </DialogHeader>
@@ -57,9 +95,27 @@ export default function ClientFormDialog({ open, onClose, client }) {
             <Label>Phone</Label>
             <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+1 234 567 890" />
           </div>
-          <div className="space-y-1.5">
-            <Label>Address</Label>
-            <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Street, City, Country" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5 md:col-span-2">
+              <Label>Address Line 1</Label>
+              <Input value={form.addressLine1} onChange={(e) => setForm({ ...form, addressLine1: e.target.value })} placeholder="House number and street" />
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label>Address Line 2</Label>
+              <Input value={form.addressLine2} onChange={(e) => setForm({ ...form, addressLine2: e.target.value })} placeholder="Apartment, suite, unit, etc." />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Town / City</Label>
+              <Input value={form.townCity} onChange={(e) => setForm({ ...form, townCity: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>County</Label>
+              <Input value={form.county} onChange={(e) => setForm({ ...form, county: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Postcode</Label>
+              <Input value={form.postcode} onChange={(e) => setForm({ ...form, postcode: e.target.value })} />
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label>Notes</Label>

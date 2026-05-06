@@ -53,11 +53,55 @@ const invoiceSchema = new mongoose.Schema(
 );
 
 const clientSchema = new mongoose.Schema(
-  { ...baseSchema, user_id: { type: mongoose.Schema.Types.ObjectId, required: true, index: true }, name: String, email: String, phone: String, address: String, notes: String },
+  {
+    ...baseSchema,
+    user_id: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+    name: String,
+    email: String,
+    phone: String,
+    address: String,
+    addressLine1: String,
+    addressLine2: String,
+    townCity: String,
+    county: String,
+    postcode: String,
+    notes: String
+  },
   { versionKey: false }
 );
 const supplierSchema = new mongoose.Schema(
-  { ...baseSchema, user_id: { type: mongoose.Schema.Types.ObjectId, required: true, index: true }, name: String, email: String, phone: String, address: String, notes: String },
+  {
+    ...baseSchema,
+    user_id: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+    name: String,
+    email: String,
+    phone: String,
+    address: String,
+    addressLine1: String,
+    addressLine2: String,
+    townCity: String,
+    county: String,
+    postcode: String,
+    notes: String
+  },
+  { versionKey: false }
+);
+const purchaseOrderSchema = new mongoose.Schema(
+  {
+    ...baseSchema,
+    user_id: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+    linked_type: String,
+    linked_id: String,
+    linked_name: String,
+    purchase_order_no: String,
+    quantity: Number,
+    currency: String,
+    unit_price: Number,
+    order_date: String,
+    start_date: String,
+    expiry_date: String,
+    delivery_date: String
+  },
   { versionKey: false }
 );
 const additionalExpenseSchema = new mongoose.Schema(
@@ -120,6 +164,30 @@ const profileSchema = new mongoose.Schema(
   },
   { versionKey: false }
 );
+const generatedRecordSchema = new mongoose.Schema(
+  {
+    ...baseSchema,
+    user_id: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+    invoice_number: String,
+    client_id: String,
+    client_name: String,
+    date: String,
+    purchase_order: String,
+    reference: String,
+    description: String,
+    quantity: Number,
+    unit_price: Number,
+    vat_rate: Number,
+    vat_amount: Number,
+    subtotal: Number,
+    total_amount: Number,
+    from_name: String,
+    from_address: String,
+    from_phone: String,
+    from_email: String
+  },
+  { versionKey: false }
+);
 
 const models: Record<string, any> = {
   users: mongoose.model("User", userSchema),
@@ -129,7 +197,9 @@ const models: Record<string, any> = {
   "additional-expenses": mongoose.model("AdditionalExpense", additionalExpenseSchema),
   "recurring-schedules": mongoose.model("RecurringSchedule", recurringScheduleSchema),
   "timesheet-state": mongoose.model("TimesheetState", timesheetStateSchema),
-  profile: mongoose.model("Profile", profileSchema)
+  profile: mongoose.model("Profile", profileSchema),
+  "generated-records": mongoose.model("GeneratedRecord", generatedRecordSchema),
+  "purchase-orders": mongoose.model("PurchaseOrder", purchaseOrderSchema)
 };
 
 const mapId = (doc) => {

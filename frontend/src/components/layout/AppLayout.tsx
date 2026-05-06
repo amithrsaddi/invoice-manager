@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, FileText, Users, BarChart2, Repeat, Receipt, PieChart, Menu, X, LogOut, Activity as ActivityIcon, CalendarCheck, Sun, Moon, UserCircle2 } from "lucide-react";
+import { LayoutDashboard, FileText, Users, BarChart2, Repeat, Receipt, PieChart, Menu, X, LogOut, Activity as ActivityIcon, CalendarCheck, Sun, Moon, UserCircle2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -11,9 +11,10 @@ const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
   { label: "Invoices & Expenses", path: "/invoices", icon: FileText },
   { label: "Additional Expenses", path: "/additional-expenses", icon: Receipt },
-  { label: "Contacts", path: "/contacts", icon: Users },
+  { label: "Contracts", path: "/contacts", icon: Users },
   { label: "Schedules", path: "/schedules", icon: Repeat },
   { label: "Timesheets", path: "/timesheets", icon: CalendarCheck },
+  { label: "Generate", path: "/generate", icon: Wand2 },
   { label: "Analytics", path: "/analytics", icon: PieChart },
   { label: "Reports", path: "/reports", icon: BarChart2 },
   { label: "Activity", path: "/activity", icon: ActivityIcon },
@@ -138,7 +139,7 @@ export default function AppLayout() {
             type="button"
             variant="ghost"
             onClick={toggleTheme}
-            className="h-8 w-[76px] rounded-full bg-card border border-border p-1 hover:bg-secondary"
+            className="h-7 w-[76px] rounded-full bg-card border border-border p-1 hover:bg-secondary"
             aria-label="Toggle light and dark mode"
           >
             <span className={`relative flex h-full w-full items-center ${isDark ? "justify-end" : "justify-start"}`}>
@@ -148,7 +149,7 @@ export default function AppLayout() {
               <span className="absolute right-1 text-muted-foreground">
                 <Moon className="h-[9px] w-[9px]" />
               </span>
-              <span className="z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all">
+              <span className="z-10 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all">
                 {isDark ? <Moon className="h-[9px] w-[9px]" /> : <Sun className="h-[9px] w-[9px]" />}
               </span>
             </span>
@@ -220,7 +221,7 @@ export default function AppLayout() {
                 type="button"
                 variant="ghost"
                 onClick={toggleTheme}
-                className="h-8 w-[76px] rounded-full bg-card border border-border p-1 hover:bg-secondary"
+                className="h-7 w-[76px] rounded-full bg-card border border-border p-1 hover:bg-secondary"
                 aria-label="Toggle light and dark mode"
               >
                 <span className={`relative flex h-full w-full items-center ${isDark ? "justify-end" : "justify-start"}`}>
@@ -230,7 +231,7 @@ export default function AppLayout() {
                   <span className="absolute right-1 text-muted-foreground">
                     <Moon className="h-[9px] w-[9px]" />
                   </span>
-                  <span className="z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all">
+                  <span className="z-10 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all">
                     {isDark ? <Moon className="h-[9px] w-[9px]" /> : <Sun className="h-[9px] w-[9px]" />}
                   </span>
                 </span>
@@ -265,7 +266,7 @@ export default function AppLayout() {
               type="button"
               variant="ghost"
               onClick={toggleTheme}
-              className="h-8 w-[76px] rounded-full bg-card border border-border p-1 hover:bg-secondary"
+              className="h-7 w-[76px] rounded-full bg-card border border-border p-1 hover:bg-secondary"
               aria-label="Toggle light and dark mode"
             >
               <span className={`relative flex h-full w-full items-center ${isDark ? "justify-end" : "justify-start"}`}>
@@ -275,7 +276,7 @@ export default function AppLayout() {
                 <span className="absolute right-1 text-muted-foreground">
                   <Moon className="h-[9px] w-[9px]" />
                 </span>
-                <span className="z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all">
+                <span className="z-10 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all">
                   {isDark ? <Moon className="h-[9px] w-[9px]" /> : <Sun className="h-[9px] w-[9px]" />}
                 </span>
               </span>

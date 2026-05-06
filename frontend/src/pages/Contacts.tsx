@@ -8,6 +8,8 @@ import { Plus, Mail, Phone, MapPin, Pencil, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ClientFormDialog from "../components/clients/ClientFormDialog";
 import SupplierFormDialog from "../components/suppliers/SupplierFormDialog";
+import { Badge } from "@/components/ui/badge";
+import PurchaseOrderFormDialog from "../components/purchase-orders/PurchaseOrderFormDialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -46,6 +48,20 @@ function ContactCard({ name, color = "primary", email, phone, address, invoiceCo
   );
 }
 
+function formatContactAddress(contact) {
+  const structured = [
+    contact?.addressLine1,
+    contact?.addressLine2,
+    contact?.townCity,
+    contact?.county,
+    contact?.postcode
+  ]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join(", ");
+  return structured || contact?.address || "";
+}
+
 export default function Contacts() {
   const queryClient = useQueryClient();
   const [clientFormOpen, setClientFormOpen] = useState(false);
@@ -53,6 +69,8 @@ export default function Contacts() {
   const [editClient, setEditClient] = useState(null);
   const [editSupplier, setEditSupplier] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, type }
+  const [purchaseOrderFormOpen, setPurchaseOrderFormOpen] = useState(false);
+  const [editPurchaseOrderItem, setEditPurchaseOrderItem] = useState(null);
 
   const { data: clients = [], isLoading: loadingClients } = useQuery({
     queryKey: ["clients"],
@@ -67,6 +85,10 @@ export default function Contacts() {
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
     queryFn: () => db.entities.Invoice.list(),
+  });
+  const { data: purchaseOrders = [] } = useQuery({
+    queryKey: ["purchase-orders"],
+    queryFn: () => db.entities.PurchaseOrder.list("-created_date"),
   });
 
   const isIncomeInvoice = (inv) => (inv.invoice_type || "income") !== "expense";
@@ -101,6 +123,12 @@ export default function Contacts() {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
     }
     setDeleteTarget(null);
+  };
+
+  const deletePurchaseOrder = async (id: string) => {
+    await db.entities.PurchaseOrder.delete(id);
+    queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    if (editPurchaseOrderItem?.id === id) setEditPurchaseOrderItem(null);
   };
 
   const isLoading = loadingClients || loadingSuppliers;
@@ -148,7 +176,7 @@ export default function Contacts() {
                     color="primary"
                     email={c.email}
                     phone={c.phone}
-                    address={c.address}
+                    address={formatContactAddress(c)}
                     invoiceCount={stats.count}
                     total={stats.total}
                     onEdit={() => {
@@ -192,7 +220,7 @@ export default function Contacts() {
                     color="destructive"
                     email={s.email}
                     phone={s.phone}
-                    address={s.address}
+                    address={formatContactAddress(s)}
                     invoiceCount={stats.count}
                     total={stats.total}
                     onEdit={() => {
@@ -208,8 +236,86 @@ export default function Contacts() {
         )}
       </section>
 
+      <section className="space-y-4 border-t border-border pt-10" aria-labelledby="contracts-purchase-orders-heading">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 id="contracts-purchase-orders-heading" className="text-xl font-semibold tracking-tight">
+            Purchase Orders <span className="text-muted-foreground font-normal">({purchaseOrders.length})</span>
+          </h2>
+          <Button onClick={() => { setEditPurchaseOrderItem(null); setPurchaseOrderFormOpen(true); }}>
+            <Plus className="w-4 h-4 mr-2" /> Add Purchase Order
+          </Button>
+        </div>
+        {purchaseOrders.length === 0 ? (
+          <Card className="p-16 text-center">
+            <p className="text-lg font-medium text-muted-foreground">No purchase orders yet</p>
+            <Button className="mt-4" onClick={() => { setEditPurchaseOrderItem(null); setPurchaseOrderFormOpen(true); }}>
+              <Plus className="w-4 h-4 mr-2" /> Add Purchase Order
+            </Button>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="p-4">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="py-2 pr-3">Purchase Order No</th>
+                      <th className="py-2 pr-3">Linked To</th>
+                      <th className="py-2 pr-3">Type</th>
+                      <th className="py-2 pr-3">Quantity</th>
+                      <th className="py-2 pr-3">Currency</th>
+                      <th className="py-2 pr-3">Unit Price</th>
+                      <th className="py-2 pr-3">Order Date</th>
+                      <th className="py-2 pr-3">Start Date</th>
+                      <th className="py-2 pr-3">Expiry Date</th>
+                      <th className="py-2 pr-3">Delivery Date</th>
+                      <th className="py-2 pr-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {purchaseOrders.map((po) => (
+                      <tr key={po.id} className="border-b">
+                        <td className="py-2 pr-3 font-medium">{po.purchase_order_no || "—"}</td>
+                        <td className="py-2 pr-3">{po.linked_name || "—"}</td>
+                        <td className="py-2 pr-3">
+                          <Badge variant="outline" className="capitalize">{po.linked_type || "client"}</Badge>
+                        </td>
+                        <td className="py-2 pr-3">{po.quantity ?? 0}</td>
+                        <td className="py-2 pr-3">{po.currency || "GBP"}</td>
+                        <td className="py-2 pr-3">£{Number(po.unit_price || 0).toFixed(2)}</td>
+                        <td className="py-2 pr-3">{po.order_date || "—"}</td>
+                        <td className="py-2 pr-3">{po.start_date || "—"}</td>
+                        <td className="py-2 pr-3">{po.expiry_date || "—"}</td>
+                        <td className="py-2 pr-3">{po.delivery_date || "—"}</td>
+                        <td className="py-2 pr-3">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditPurchaseOrderItem(po); setPurchaseOrderFormOpen(true); }}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deletePurchaseOrder(po.id)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+
       <ClientFormDialog open={clientFormOpen} onClose={() => { setClientFormOpen(false); setEditClient(null); }} client={editClient} />
       <SupplierFormDialog open={supplierFormOpen} onClose={() => { setSupplierFormOpen(false); setEditSupplier(null); }} supplier={editSupplier} />
+      <PurchaseOrderFormDialog
+        open={purchaseOrderFormOpen}
+        onClose={() => { setPurchaseOrderFormOpen(false); setEditPurchaseOrderItem(null); }}
+        purchaseOrder={editPurchaseOrderItem}
+        clients={clients}
+        suppliers={suppliers}
+      />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
