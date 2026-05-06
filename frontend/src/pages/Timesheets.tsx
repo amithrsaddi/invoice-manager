@@ -497,6 +497,8 @@ export default function Timesheets() {
   };
 
   const deleteDayEntry = (dateKey: string) => {
+    const confirmed = window.confirm(`Are you sure you want to delete the entry for ${dateKey}?`);
+    if (!confirmed) return;
     setTimesheets((prev) => {
       const monthForDate = dateKey.slice(0, 7);
       const monthEntriesForDate = prev[monthForDate];
@@ -550,6 +552,8 @@ export default function Timesheets() {
   };
 
   const removePublicHoliday = (dateKey: string) => {
+    const confirmed = window.confirm(`Are you sure you want to delete the public holiday on ${dateKey}?`);
+    if (!confirmed) return;
     setPublicHolidays((prev) => {
       if (!prev[dateKey]) return prev;
       const next = { ...prev };

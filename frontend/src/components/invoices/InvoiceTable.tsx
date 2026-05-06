@@ -69,6 +69,8 @@ export default function InvoiceTable({
   };
 
   const handleDelete = async (invoice) => {
+    const confirmed = window.confirm(`Are you sure you want to delete invoice ${invoice.invoice_number || ""}?`);
+    if (!confirmed) return;
     await db.entities.Invoice.delete(invoice.id);
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
   };

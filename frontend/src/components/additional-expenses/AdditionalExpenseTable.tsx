@@ -44,6 +44,8 @@ export default function AdditionalExpenseTable({ expenses, onEdit }) {
   });
 
   const handleDelete = async (id) => {
+    const confirmed = window.confirm("Are you sure you want to delete this additional expense?");
+    if (!confirmed) return;
     await db.entities.AdditionalExpense.delete(id);
     queryClient.invalidateQueries({ queryKey: ["additional_expenses"] });
   };

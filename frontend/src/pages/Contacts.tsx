@@ -126,6 +126,8 @@ export default function Contacts() {
   };
 
   const deletePurchaseOrder = async (id: string) => {
+    const confirmed = window.confirm("Are you sure you want to delete this purchase order?");
+    if (!confirmed) return;
     await db.entities.PurchaseOrder.delete(id);
     queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
     if (editPurchaseOrderItem?.id === id) setEditPurchaseOrderItem(null);
