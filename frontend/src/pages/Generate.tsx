@@ -173,27 +173,37 @@ export default function Generate() {
 *{box-sizing:border-box}
 @page{size:A4;margin:10mm}
 html,body{margin:0;padding:0}
-body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;padding:0;font-size:12px;line-height:1.3;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;padding:0;font-size:14px;line-height:1.3;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
-.title{font-size:42px;font-weight:700;letter-spacing:.2px;line-height:1;color:#2b4c9b}
-.from{margin-top:6px;color:#1f2937}
+.title{font-size:44px;font-weight:700;letter-spacing:.2px;line-height:1;color:#2b4c9b}
+.from{margin-top:48px;color:#1f2937}
 .muted{color:#64748b}
-.date{font-size:13px;font-weight:600;padding-top:8px}
-.metaWrap{display:grid;grid-template-columns:1.1fr 1fr;gap:22px;margin:14px 0 8px}
+.metaWrap{display:grid;grid-template-columns:1.2fr 0.8fr;gap:22px;margin:28px 0 8px}
 .metaCol .line{margin:2px 0}
 .metaCol strong{display:inline-block;min-width:116px}
+.metaCol--right{justify-self:end;width:360px;text-align:right}
+.metaCol--right .line{display:flex;justify-content:flex-end;gap:10px;width:100%}
+.metaCol--right .line strong{width:150px;min-width:150px;text-align:left}
+.metaCol--right .line .value{display:inline-block;min-width:120px;text-align:right}
 .sectionLabel{font-weight:700;margin-bottom:4px;color:#1e3a8a}
-.additional{display:flex;justify-content:space-between;align-items:flex-start;margin:10px 0 4px}
+.additional{display:flex;justify-content:space-between;align-items:flex-start;margin:36px 0 36px}
 table{width:100%;border-collapse:collapse;margin-top:4px}
-th{border-top:1px solid #94a3b8;border-bottom:1px solid #94a3b8;padding:7px 6px;text-align:left;font-size:11px;font-weight:700;background:#eff6ff;color:#1e3a8a}
+th{border-top:1px solid #94a3b8;border-bottom:1px solid #94a3b8;padding:7px 6px;text-align:left;font-size:13px;font-weight:700;background:#eff6ff;color:#1e3a8a}
 td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
 .right{text-align:right}
 .totals{margin-top:10px;margin-left:auto;width:300px}
 .totals .line{display:flex;justify-content:space-between;padding:3px 0}
-.totals .grand{border-top:1px solid #111827;margin-top:5px;padding-top:8px;font-size:15px;font-weight:700}
-.footer{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:20px;padding-top:12px;border-top:1px solid #cbd5e1}
-.footer h4{font-size:11px;margin:0 0 5px;color:#1e3a8a;text-transform:uppercase;letter-spacing:.04em}
-.small{font-size:11px;color:#334155}
+.totals .grand{border-top:1px solid #111827;margin-top:5px;padding-top:8px;font-size:17px;font-weight:700}
+.footer{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:20px;padding-top:12px;border-top:1px solid #cbd5e1;width:100%}
+.footer>div{min-width:0}
+.footer>div:nth-child(1){text-align:left}
+.footer>div:nth-child(2){text-align:left}
+.footer>div:nth-child(3){text-align:left}
+.footer>div:nth-child(1){justify-self:start}
+.footer>div:nth-child(2){justify-self:center}
+.footer>div:nth-child(3){justify-self:end}
+.footer h4{font-size:13px;margin:0 0 5px;color:#1e3a8a;letter-spacing:.02em}
+.small{font-size:13px;color:#334155}
 </style></head><body>
 <div class="header">
   <div>
@@ -202,7 +212,6 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
     ${fromAddressLines.map((line) => `<div class="muted">${line}</div>`).join("")}
     <div class="muted">Phone: ${profile.phone || "—"}</div>
   </div>
-  <div class="date">${dateLabel}</div>
 </div>
 <div class="metaWrap">
   <div class="metaCol">
@@ -211,12 +220,12 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
     ${toAddressLines.map((line) => `<div class="muted">${line}</div>`).join("") || `<div class="muted">${toAddress || "—"}</div>`}
     <div class="muted">Accounts Payable</div>
   </div>
-  <div class="metaCol">
-    <div class="line"><strong>Invoice Number:</strong> ${activeInvoiceNumber}</div>
-    <div class="line"><strong>Purchase Order:</strong> ${activePurchaseOrder || "—"}</div>
-    <div class="line"><strong>Invoice Date:</strong> ${dateLabel}</div>
-    <div class="line"><strong>Reference:</strong> ${activeReference || "—"}</div>
-    <div class="line"><strong>PO Number:</strong> ${activePurchaseOrder || "—"}</div>
+  <div class="metaCol metaCol--right">
+    <div class="line"><strong>Invoice Number:</strong> <span class="value">${activeInvoiceNumber}</span></div>
+    <div class="line"><strong>Purchase Order:</strong> <span class="value">${activePurchaseOrder || "—"}</span></div>
+    <div class="line"><strong>Invoice Date:</strong> <span class="value">${dateLabel}</span></div>
+    <div class="line"><strong>Reference:</strong> <span class="value">${activeReference || "—"}</span></div>
+    <div class="line"><strong>PO Number:</strong> <span class="value">${activePurchaseOrder || "—"}</span></div>
   </div>
 </div>
 <div class="additional">
@@ -264,6 +273,7 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
       invoiceDate?: string;
       purchaseOrder?: string;
       reference?: string;
+      vatRegNo?: string;
       description?: string;
       quantity?: number;
       unitPrice?: number;
@@ -424,6 +434,8 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
   };
 
   const deleteGeneratedRecord = async (id: string) => {
+    const confirmed = window.confirm("Are you sure you want to delete this draft record?");
+    if (!confirmed) return;
     await db.entities.GeneratedRecord.delete(id);
     queryClient.invalidateQueries({ queryKey: ["generated-records"] });
     if (editingRecordId === id) setEditingRecordId(null);
