@@ -18,6 +18,7 @@ import Timesheets from './pages/Timesheets';
 import Auth from './pages/Auth';
 import Profile from './pages/Profile';
 import Generate from './pages/Generate';
+import Settings from './pages/Settings';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated } = useAuth();
@@ -46,6 +47,7 @@ const AuthenticatedApp = () => {
         <Route path="/timesheets" element={<Timesheets />} />
         <Route path="/generate" element={<Generate />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/activity" element={<Activity />} />
       </Route>

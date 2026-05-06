@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 const STATUS_COLORS = {
   outstanding: "#ef4444", // red
@@ -20,6 +20,12 @@ export default function StatusPieChart({ invoices }) {
     value,
     key: name,
   }));
+  const dataWithCount = data
+    .map((item) => ({
+      ...item,
+      count: item.value,
+    }))
+    .sort((a, b) => b.value - a.value);
 
   if (data.length === 0) {
     return (
@@ -36,18 +42,54 @@ export default function StatusPieChart({ invoices }) {
         <CardTitle className="text-lg font-semibold">Status Overview</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={4} stroke="#ffffff" strokeWidth={2} dataKey="value">
-                {data.map((entry) => (
-                  <Cell key={entry.key} fill={STATUS_COLORS[entry.key]} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: 13 }} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {dataWithCount.map((entry) => (
+              <div
+                key={entry.key}
+                className="rounded-md border border-border/80 bg-card px-3 py-2 text-sm flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: STATUS_COLORS[entry.key] }}
+                  />
+                  <span className="truncate">{entry.name}</span>
+                </div>
+                <span className="font-semibold">{entry.count}</span>
+              </div>
+            ))}
+          </div>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={dataWithCount}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={58}
+                  outerRadius={86}
+                  paddingAngle={4}
+                  stroke="#ffffff"
+                  strokeWidth={2}
+                  dataKey="value"
+                >
+                  {dataWithCount.map((entry) => (
+                    <Cell key={entry.key} fill={STATUS_COLORS[entry.key]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number, _name, payload: any) => [`${value} invoices`, payload?.payload?.name]}
+                  contentStyle={{
+                    background: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    fontSize: 13
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </CardContent>
     </Card>
