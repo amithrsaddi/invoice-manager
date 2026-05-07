@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Check, FileText, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Check, FileText, MoreHorizontal, Paperclip, Pencil, Trash2 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -25,6 +25,11 @@ const safeDateLabel = (rawDate: string) => {
   const parsed = new Date(`${rawDate}T00:00:00`);
   if (Number.isNaN(parsed.getTime())) return "—";
   return format(parsed, "dd/MM/yyyy");
+};
+
+const buildSafeInvoicePdfName = (invoiceNo: string) => {
+  const normalized = String(invoiceNo || "invoice").trim();
+  return `${normalized.replace(/[^a-zA-Z0-9_-]+/g, "-") || "invoice"}.pdf`;
 };
 
 export default function Generate() {
@@ -331,13 +336,38 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
       const yOffset = verticalMargin;
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", xOffset, yOffset, renderWidth, renderHeight, undefined, "FAST");
       const invoiceNo = String(source?.invoiceNumber || fallbackInvoiceNumber || invoiceNumber || "invoice").trim();
-      const safeName = invoiceNo.replace(/[^a-zA-Z0-9_-]+/g, "-");
-      pdf.save(`${safeName}.pdf`);
+      const fileName = buildSafeInvoicePdfName(invoiceNo);
+      const dataUri = pdf.output("datauristring");
+      const contentBase64 = String(dataUri).split("base64,")[1] || "";
+      pdf.save(fileName);
+      return {
+        original_name: fileName,
+        mime_type: "application/pdf",
+        content_base64: contentBase64,
+        generated_at: new Date().toISOString()
+      };
     } catch (error) {
       setSaveMessage("Could not generate PDF. Please check required fields and try again.");
       console.error("Generate PDF failed:", error);
+      return null;
     } finally {
       document.body.removeChild(container);
+    }
+  };
+
+  const viewGeneratedPdf = (record: any) => {
+    const attachment = record?.generated_pdf;
+    if (!attachment?.content_base64) return;
+    const mimeType = attachment.mime_type || "application/pdf";
+    const dataUri = `data:${mimeType};base64,${attachment.content_base64}`;
+    const viewer = window.open(dataUri, "_blank", "noopener,noreferrer");
+    if (!viewer) {
+      const link = document.createElement("a");
+      link.href = dataUri;
+      link.download = attachment.original_name || buildSafeInvoicePdfName(record.invoice_number);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -345,7 +375,7 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
     const clientForRecord =
       clients.find((client) => client.id === record.client_id) ||
       ({ name: record.client_name } as any);
-    await downloadInvoicePdf(
+    const generatedPdfAttachment = await downloadInvoicePdf(
       {
         client: clientForRecord,
         invoiceNumber: record.invoice_number || `INV-${Date.now().toString().slice(-6)}`,
@@ -363,6 +393,11 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
       },
       record.invoice_number
     );
+    if (generatedPdfAttachment) {
+      await db.entities.GeneratedRecord.update(record.id, { generated_pdf: generatedPdfAttachment });
+      queryClient.invalidateQueries({ queryKey: ["generated-records"] });
+      setSaveMessage("PDF generated and attached to draft.");
+    }
   };
 
   const saveRecord = async () => {
@@ -455,6 +490,7 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
       subtotal: record.subtotal,
       total_amount: record.total_amount,
       notes: `PO: ${record.purchase_order || "-"} | Ref: ${record.reference || "-"}`,
+      attachment: record.generated_pdf?.content_base64 ? record.generated_pdf : undefined,
       items: [
         {
           description: record.description || "Services rendered",
@@ -661,6 +697,9 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
                     <Badge variant="outline" className="capitalize border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
                       {String(record.status || "draft")}
                     </Badge>
+                    {record.generated_pdf?.content_base64 ? (
+                      <Paperclip className="h-4 w-4 text-muted-foreground" />
+                    ) : null}
                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => editGeneratedRecord(record)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
@@ -671,9 +710,20 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => generatePdfForRecord(record)}>
-                          <FileText className="w-4 h-4 mr-2" /> Generate PDF
-                        </DropdownMenuItem>
+                        {record.generated_pdf?.content_base64 ? (
+                          <>
+                            <DropdownMenuItem onClick={() => viewGeneratedPdf(record)}>
+                              <FileText className="w-4 h-4 mr-2" /> View Generated PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => generatePdfForRecord(record)}>
+                              <FileText className="w-4 h-4 mr-2" /> Regenerate PDF
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <DropdownMenuItem onClick={() => generatePdfForRecord(record)}>
+                            <FileText className="w-4 h-4 mr-2" /> Generate PDF
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => approveGeneratedRecord(record)}>
                           <Check className="w-4 h-4 mr-2" /> Approve
                         </DropdownMenuItem>

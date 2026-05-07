@@ -46,12 +46,12 @@ export default function RevenueChart({ invoices, year }) {
   const titleSuffix = isAllTime ? "All Years (by year)" : year;
 
   return (
-    <Card className="shadow-sm">
+    <Card className="shadow-sm h-[420px] flex flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-semibold">Income vs Expenses — {titleSuffix}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="h-72">
+      <CardContent className="flex-1 min-h-0">
+        <div className="h-full min-h-0">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} barGap={2}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />

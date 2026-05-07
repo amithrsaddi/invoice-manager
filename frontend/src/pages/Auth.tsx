@@ -1,11 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { Moon, Sun } from "lucide-react";
 
 export default function Auth() {
   const { login, register } = useAuth();
   const [mode, setMode] = useState("login");
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,18 +15,6 @@ export default function Auth() {
     () => (mode === "login" ? "Track invoices, payments, and financial records with ease" : "Create Your Account To Start Managing Invoices"),
     [mode]
   );
-
-  const toggleTheme = () => {
-    const nextIsDark = !isDark;
-    setIsDark(nextIsDark);
-    if (nextIsDark) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("invoice_manager_theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("invoice_manager_theme", "light");
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,27 +35,6 @@ export default function Auth() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#eef0ff] px-3 py-4 sm:px-4 sm:py-8">
-      <div className="absolute right-4 top-4 z-20">
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="h-7 w-[76px] rounded-full border border-border bg-card p-1 hover:bg-secondary"
-          aria-label="Toggle light and dark mode"
-        >
-          <span className={`relative flex h-full w-full items-center ${isDark ? "justify-end" : "justify-start"}`}>
-            <span className="absolute left-1 text-muted-foreground">
-              <Sun className="h-[9px] w-[9px]" />
-            </span>
-            <span className="absolute right-1 text-muted-foreground">
-              <Moon className="h-[9px] w-[9px]" />
-            </span>
-            <span className="z-10 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all">
-              {isDark ? <Moon className="h-[9px] w-[9px]" /> : <Sun className="h-[9px] w-[9px]" />}
-            </span>
-          </span>
-        </button>
-      </div>
-
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-6xl items-start justify-center pt-10 sm:min-h-[calc(100vh-4rem)] sm:items-center sm:pt-0">
         <div className="grid w-full overflow-hidden rounded-xl border border-slate-200/60 bg-white/95 shadow-xl backdrop-blur-sm sm:rounded-2xl sm:shadow-2xl md:grid-cols-2">
           <div className="flex items-center">

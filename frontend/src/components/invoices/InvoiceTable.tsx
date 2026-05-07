@@ -142,7 +142,7 @@ export default function InvoiceTable({
             <Th col="date" label="Date" />
             <Th col="due_date" label="Due Date" />
             <Th col="subtotal" label="Net" align="end" />
-            <Th col="vat_rate" label="VAT %" align="end" />
+            <Th col="vat_rate" label="VAT %" align="end" className="whitespace-nowrap" />
             <Th col="vat_amount" label="VAT £" align="end" />
             <Th col="total_amount" label="Gross" align="end" />
             <Th col="status" label="Status" />
@@ -179,8 +179,8 @@ export default function InvoiceTable({
               </TableCell>
               <TableCell className="font-medium">{inv.invoice_number}</TableCell>
               <TableCell>{inv.client_name || "—"}</TableCell>
-              <TableCell>{inv.date ? format(new Date(inv.date), "MMM d, yyyy") : "—"}</TableCell>
-              <TableCell>{inv.due_date ? format(new Date(inv.due_date), "MMM d, yyyy") : "—"}</TableCell>
+              <TableCell className="whitespace-nowrap">{inv.date ? format(new Date(inv.date), "MMM d, yyyy") : "—"}</TableCell>
+              <TableCell className="whitespace-nowrap">{inv.due_date ? format(new Date(inv.due_date), "MMM d, yyyy") : "—"}</TableCell>
               <TableCell className="text-right font-semibold tabular-nums">£{(inv.subtotal || 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}</TableCell>
               <TableCell className="text-right text-muted-foreground tabular-nums">{inv.vat_rate != null ? `${inv.vat_rate}%` : "—"}</TableCell>
               <TableCell className="text-right text-muted-foreground tabular-nums">£{(inv.vat_amount || 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}</TableCell>

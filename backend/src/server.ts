@@ -194,7 +194,8 @@ const generatedRecordSchema = new mongoose.Schema(
     from_name: String,
     from_address: String,
     from_phone: String,
-    from_email: String
+    from_email: String,
+    generated_pdf: mongoose.Schema.Types.Mixed
   },
   { versionKey: false }
 );
