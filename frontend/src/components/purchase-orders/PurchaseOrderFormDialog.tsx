@@ -14,10 +14,19 @@ const emptyForm = {
   quantity: "",
   currency: "GBP",
   unitPrice: "",
+  totalValue: "",
+  totalValueOverridden: false,
   orderDate: "",
   startDate: "",
   expiryDate: "",
   deliveryDate: ""
+};
+
+const calculateTotalValue = (quantity: string, unitPrice: string) => {
+  const quantityNumber = Number(quantity);
+  const unitPriceNumber = Number(unitPrice);
+  if (!Number.isFinite(quantityNumber) || !Number.isFinite(unitPriceNumber)) return "";
+  return String(quantityNumber * unitPriceNumber);
 };
 
 export default function PurchaseOrderFormDialog({ open, onClose, purchaseOrder, clients, suppliers }) {
@@ -34,6 +43,11 @@ export default function PurchaseOrderFormDialog({ open, onClose, purchaseOrder, 
         quantity: String(purchaseOrder.quantity ?? ""),
         currency: purchaseOrder.currency || "GBP",
         unitPrice: String(purchaseOrder.unit_price ?? ""),
+        totalValue: String(
+          purchaseOrder.total_value ??
+            Number(purchaseOrder.quantity ?? 0) * Number(purchaseOrder.unit_price ?? 0)
+        ),
+        totalValueOverridden: Boolean(purchaseOrder.total_value != null),
         orderDate: purchaseOrder.order_date || "",
         startDate: purchaseOrder.start_date || "",
         expiryDate: purchaseOrder.expiry_date || "",
@@ -60,6 +74,7 @@ export default function PurchaseOrderFormDialog({ open, onClose, purchaseOrder, 
       quantity: Number(form.quantity) || 0,
       currency: form.currency || "GBP",
       unit_price: Number(form.unitPrice) || 0,
+      total_value: Number(form.totalValue) || 0,
       order_date: form.orderDate || "",
       start_date: form.startDate || "",
       expiry_date: form.expiryDate || "",
@@ -106,9 +121,10 @@ export default function PurchaseOrderFormDialog({ open, onClose, purchaseOrder, 
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-1.5"><Label>Purchase Order No</Label><Input value={form.purchaseOrderNo} onChange={(e) => setForm((prev) => ({ ...prev, purchaseOrderNo: e.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>Quantity</Label><Input type="number" min="0" value={form.quantity} onChange={(e) => setForm((prev) => ({ ...prev, quantity: e.target.value }))} /></div>
+            <div className="space-y-1.5"><Label>Quantity</Label><Input type="number" min="0" value={form.quantity} onChange={(e) => setForm((prev) => { const quantity = e.target.value; return { ...prev, quantity, totalValue: prev.totalValueOverridden ? prev.totalValue : calculateTotalValue(quantity, prev.unitPrice) }; })} /></div>
             <div className="space-y-1.5"><Label>Currency</Label><Input value={form.currency} onChange={(e) => setForm((prev) => ({ ...prev, currency: e.target.value.toUpperCase() }))} /></div>
-            <div className="space-y-1.5"><Label>Unit Price</Label><Input type="number" min="0" step="0.01" value={form.unitPrice} onChange={(e) => setForm((prev) => ({ ...prev, unitPrice: e.target.value }))} /></div>
+            <div className="space-y-1.5"><Label>Unit Price</Label><Input type="number" min="0" step="0.01" value={form.unitPrice} onChange={(e) => setForm((prev) => { const unitPrice = e.target.value; return { ...prev, unitPrice, totalValue: prev.totalValueOverridden ? prev.totalValue : calculateTotalValue(prev.quantity, unitPrice) }; })} /></div>
+            <div className="space-y-1.5"><Label>Total Value</Label><Input type="number" min="0" step="0.01" value={form.totalValue} onChange={(e) => setForm((prev) => ({ ...prev, totalValue: e.target.value, totalValueOverridden: true }))} /></div>
             <div className="space-y-1.5"><Label>Order Date</Label><Input type="date" value={form.orderDate} onChange={(e) => setForm((prev) => ({ ...prev, orderDate: e.target.value }))} /></div>
             <div className="space-y-1.5"><Label>Start Date</Label><Input type="date" value={form.startDate} onChange={(e) => setForm((prev) => ({ ...prev, startDate: e.target.value }))} /></div>
             <div className="space-y-1.5"><Label>Expiry Date</Label><Input type="date" value={form.expiryDate} onChange={(e) => setForm((prev) => ({ ...prev, expiryDate: e.target.value }))} /></div>

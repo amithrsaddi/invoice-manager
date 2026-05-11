@@ -16,11 +16,20 @@ const createEmptyForm = () => ({
   quantity: "",
   currency: "GBP",
   unitPrice: "",
+  totalValue: "",
+  totalValueOverridden: false,
   orderDate: "",
   startDate: "",
   expiryDate: "",
   deliveryDate: ""
 });
+
+const calculateTotalValue = (quantity: string, unitPrice: string) => {
+  const quantityNumber = Number(quantity);
+  const unitPriceNumber = Number(unitPrice);
+  if (!Number.isFinite(quantityNumber) || !Number.isFinite(unitPriceNumber)) return "";
+  return String(quantityNumber * unitPriceNumber);
+};
 
 export default function PurchaseOrders() {
   const queryClient = useQueryClient();
@@ -62,6 +71,7 @@ export default function PurchaseOrders() {
       quantity: Number(form.quantity) || 0,
       currency: form.currency.trim() || "GBP",
       unit_price: Number(form.unitPrice) || 0,
+      total_value: Number(form.totalValue) || 0,
       order_date: form.orderDate || "",
       start_date: form.startDate || "",
       expiry_date: form.expiryDate || "",
@@ -86,6 +96,8 @@ export default function PurchaseOrders() {
       quantity: String(record.quantity ?? ""),
       currency: record.currency || "GBP",
       unitPrice: String(record.unit_price ?? ""),
+      totalValue: String(record.total_value ?? Number(record.quantity ?? 0) * Number(record.unit_price ?? 0)),
+      totalValueOverridden: Boolean(record.total_value != null),
       orderDate: record.order_date || "",
       startDate: record.start_date || "",
       expiryDate: record.expiry_date || "",
@@ -147,7 +159,7 @@ export default function PurchaseOrders() {
             </div>
             <div className="space-y-1.5">
               <Label>Quantity</Label>
-              <Input type="number" min="0" value={form.quantity} onChange={(e) => setForm((prev) => ({ ...prev, quantity: e.target.value }))} />
+              <Input type="number" min="0" value={form.quantity} onChange={(e) => setForm((prev) => { const quantity = e.target.value; return { ...prev, quantity, totalValue: prev.totalValueOverridden ? prev.totalValue : calculateTotalValue(quantity, prev.unitPrice) }; })} />
             </div>
             <div className="space-y-1.5">
               <Label>Currency</Label>
@@ -155,7 +167,11 @@ export default function PurchaseOrders() {
             </div>
             <div className="space-y-1.5">
               <Label>Unit Price</Label>
-              <Input type="number" min="0" step="0.01" value={form.unitPrice} onChange={(e) => setForm((prev) => ({ ...prev, unitPrice: e.target.value }))} />
+              <Input type="number" min="0" step="0.01" value={form.unitPrice} onChange={(e) => setForm((prev) => { const unitPrice = e.target.value; return { ...prev, unitPrice, totalValue: prev.totalValueOverridden ? prev.totalValue : calculateTotalValue(prev.quantity, unitPrice) }; })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Total Value</Label>
+              <Input type="number" min="0" step="0.01" value={form.totalValue} onChange={(e) => setForm((prev) => ({ ...prev, totalValue: e.target.value, totalValueOverridden: true }))} />
             </div>
             <div className="space-y-1.5">
               <Label>Order Date</Label>
@@ -200,6 +216,7 @@ export default function PurchaseOrders() {
                     <th className="py-2 pr-3">Qty</th>
                     <th className="py-2 pr-3">Currency</th>
                     <th className="py-2 pr-3">Unit Price</th>
+                    <th className="py-2 pr-3">Total Value</th>
                     <th className="py-2 pr-3">Order Date</th>
                     <th className="py-2 pr-3">Start Date</th>
                     <th className="py-2 pr-3">Expiry Date</th>
@@ -220,6 +237,7 @@ export default function PurchaseOrders() {
                       <td className="py-2 pr-3">{po.quantity ?? 0}</td>
                       <td className="py-2 pr-3">{po.currency || "GBP"}</td>
                       <td className="py-2 pr-3">£{Number(po.unit_price || 0).toFixed(2)}</td>
+                      <td className="py-2 pr-3">£{Number(po.total_value ?? Number(po.quantity || 0) * Number(po.unit_price || 0)).toFixed(2)}</td>
                       <td className="py-2 pr-3">{po.order_date || "—"}</td>
                       <td className="py-2 pr-3">{po.start_date || "—"}</td>
                       <td className="py-2 pr-3">{po.expiry_date || "—"}</td>

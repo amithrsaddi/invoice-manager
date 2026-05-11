@@ -97,6 +97,7 @@ const purchaseOrderSchema = new mongoose.Schema(
     quantity: Number,
     currency: String,
     unit_price: Number,
+    total_value: Number,
     order_date: String,
     start_date: String,
     expiry_date: String,

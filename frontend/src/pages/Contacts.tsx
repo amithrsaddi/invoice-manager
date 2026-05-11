@@ -267,6 +267,7 @@ export default function Contacts() {
                       <th className="py-2 pr-3">Quantity</th>
                       <th className="py-2 pr-3">Currency</th>
                       <th className="py-2 pr-3">Unit Price</th>
+                      <th className="py-2 pr-3">Total Value</th>
                       <th className="py-2 pr-3">Order Date</th>
                       <th className="py-2 pr-3">Start Date</th>
                       <th className="py-2 pr-3">Expiry Date</th>
@@ -285,6 +286,7 @@ export default function Contacts() {
                         <td className="py-2 pr-3">{po.quantity ?? 0}</td>
                         <td className="py-2 pr-3">{po.currency || "GBP"}</td>
                         <td className="py-2 pr-3">£{Number(po.unit_price || 0).toFixed(2)}</td>
+                        <td className="py-2 pr-3">£{Number(po.total_value ?? Number(po.quantity || 0) * Number(po.unit_price || 0)).toFixed(2)}</td>
                         <td className="py-2 pr-3">{po.order_date || "—"}</td>
                         <td className="py-2 pr-3">{po.start_date || "—"}</td>
                         <td className="py-2 pr-3">{po.expiry_date || "—"}</td>

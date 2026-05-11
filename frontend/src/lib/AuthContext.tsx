@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db } from "@/api/dbClient";
 import { queryClientInstance } from "@/lib/query-client";
 
@@ -25,6 +26,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
@@ -85,10 +87,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsAuthenticated(false);
     setAuthError({ type: "auth_required", message: "Logged out" });
     db.auth.logout();
+    navigate('/login', { replace: true });
   };
 
   const navigateToLogin = () => {
-    return;
+    navigate('/login', { replace: true });
   };
 
   return (
