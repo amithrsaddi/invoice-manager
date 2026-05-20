@@ -14,6 +14,21 @@ const setUserId = (userId: string | null | undefined) => {
   else localStorage.removeItem(USER_ID_KEY);
 };
 
+/** Prefer API `error` / `message` fields over raw JSON in thrown Error.message */
+function getHttpErrorMessage(body: string, status: number): string {
+  const trimmed = body?.trim() ?? "";
+  if (!trimmed) return `Something went wrong (${status}). Please try again.`;
+  try {
+    const parsed = JSON.parse(trimmed) as { error?: unknown; message?: unknown };
+    if (typeof parsed.error === "string" && parsed.error.trim()) return parsed.error.trim();
+    if (typeof parsed.message === "string" && parsed.message.trim()) return parsed.message.trim();
+  } catch {
+    // not JSON — use plain text if short enough
+  }
+  if (trimmed.startsWith("{")) return `Something went wrong (${status}). Please try again.`;
+  return trimmed.length > 280 ? `Something went wrong (${status}). Please try again.` : trimmed;
+}
+
 const request = async <T = unknown>(path: string, options: RequestOptions = {}): Promise<T> => {
   const userId = getUserId();
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -26,7 +41,7 @@ const request = async <T = unknown>(path: string, options: RequestOptions = {}):
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `Request failed: ${response.status}`);
+    throw new Error(getHttpErrorMessage(text, response.status));
   }
 
   if (response.status === 204) return null;

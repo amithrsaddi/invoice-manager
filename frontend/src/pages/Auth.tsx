@@ -29,6 +29,21 @@ export default function Auth() {
     [mode]
   );
 
+  const formatAuthError = (message: string) => {
+    const m = message.trim();
+    if (!m) return "Something went wrong. Please try again.";
+    if (m === "Invalid credentials") {
+      return "That email or password doesn't match our records. Please check and try again.";
+    }
+    if (m === "Email already registered") {
+      return "This email is already registered. Log in or use a different email.";
+    }
+    if (m.includes("Name, email, and password")) {
+      return "Please enter your name, a valid email, and a password of at least 6 characters.";
+    }
+    return m;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -45,7 +60,8 @@ export default function Auth() {
         await register({ name, email, password });
       }
     } catch (err) {
-      setError(err.message || "Authentication failed");
+      const raw = err instanceof Error ? err.message : String(err);
+      setError(formatAuthError(raw));
     } finally {
       setLoading(false);
     }
