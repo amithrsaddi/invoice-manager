@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
+import PurchaseOrdersTable from "@/components/purchase-orders/PurchaseOrdersTable";
 
 const createEmptyForm = () => ({
   linkedType: "client",
@@ -207,56 +207,12 @@ export default function PurchaseOrders() {
           {purchaseOrders.length === 0 ? (
             <p className="text-sm text-muted-foreground">No purchase orders yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="py-2 pr-3">PO No</th>
-                    <th className="py-2 pr-3">Linked To</th>
-                    <th className="py-2 pr-3">Qty</th>
-                    <th className="py-2 pr-3">Currency</th>
-                    <th className="py-2 pr-3">Unit Price</th>
-                    <th className="py-2 pr-3">Total Value</th>
-                    <th className="py-2 pr-3">Order Date</th>
-                    <th className="py-2 pr-3">Start Date</th>
-                    <th className="py-2 pr-3">Expiry Date</th>
-                    <th className="py-2 pr-3">Delivery Date</th>
-                    <th className="py-2 pr-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {purchaseOrders.map((po) => (
-                    <tr key={po.id} className="border-b">
-                      <td className="py-2 pr-3 font-medium">{po.purchase_order_no || "—"}</td>
-                      <td className="py-2 pr-3">
-                        <div className="flex items-center gap-2">
-                          <span>{po.linked_name || "—"}</span>
-                          <Badge variant="outline" className="capitalize">{po.linked_type || "client"}</Badge>
-                        </div>
-                      </td>
-                      <td className="py-2 pr-3">{po.quantity ?? 0}</td>
-                      <td className="py-2 pr-3">{po.currency || "GBP"}</td>
-                      <td className="py-2 pr-3">£{Number(po.unit_price || 0).toFixed(2)}</td>
-                      <td className="py-2 pr-3">£{Number(po.total_value ?? Number(po.quantity || 0) * Number(po.unit_price || 0)).toFixed(2)}</td>
-                      <td className="py-2 pr-3">{po.order_date || "—"}</td>
-                      <td className="py-2 pr-3">{po.start_date || "—"}</td>
-                      <td className="py-2 pr-3">{po.expiry_date || "—"}</td>
-                      <td className="py-2 pr-3">{po.delivery_date || "—"}</td>
-                      <td className="py-2 pr-3">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(po)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(po.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <PurchaseOrdersTable
+              purchaseOrders={purchaseOrders}
+              mergeLinkedTypeInRow
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           )}
         </CardContent>
       </Card>

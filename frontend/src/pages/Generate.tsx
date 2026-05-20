@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Check, FileText, MoreHorizontal, Paperclip, Pencil, Trash2 } from "lucide-react";
+import { formatDisplayDate } from "@/lib/utils";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -511,7 +512,7 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Generate</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Generate Invoice</h1>
           <p className="text-muted-foreground mt-1">Create prefilled invoices from Profile + Client details, save, and generate PDF.</p>
         </div>
         <Button onClick={saveRecord} disabled={saving}>{saving ? "Saving..." : editingRecordId ? "Update Draft" : "Save as Draft"}</Button>
@@ -607,8 +608,8 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
                     </div>
                     {selectedLinkedPurchaseOrder ? (
                       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <span className="rounded-full bg-muted px-2 py-0.5">Start: {selectedLinkedPurchaseOrder.start_date || "—"}</span>
-                        <span className="rounded-full bg-muted px-2 py-0.5">Expiry: {selectedLinkedPurchaseOrder.expiry_date || "—"}</span>
+                        <span className="rounded-full bg-muted px-2 py-0.5">Start: {formatDisplayDate(selectedLinkedPurchaseOrder.start_date)}</span>
+                        <span className="rounded-full bg-muted px-2 py-0.5">Expiry: {formatDisplayDate(selectedLinkedPurchaseOrder.expiry_date)}</span>
                         <span className="rounded-full bg-muted px-2 py-0.5">
                           Unit Price: {selectedLinkedPurchaseOrder.currency || "GBP"} {Number(selectedLinkedPurchaseOrder.unit_price || 0).toFixed(2)}
                         </span>

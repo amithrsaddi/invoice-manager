@@ -8,8 +8,8 @@ import { Plus, Mail, Phone, MapPin, Pencil, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ClientFormDialog from "../components/clients/ClientFormDialog";
 import SupplierFormDialog from "../components/suppliers/SupplierFormDialog";
-import { Badge } from "@/components/ui/badge";
 import PurchaseOrderFormDialog from "../components/purchase-orders/PurchaseOrderFormDialog";
+import PurchaseOrdersTable from "../components/purchase-orders/PurchaseOrdersTable";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -257,55 +257,12 @@ export default function Contacts() {
         ) : (
           <Card>
             <CardContent className="p-4">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left">
-                      <th className="py-2 pr-3">Purchase Order No</th>
-                      <th className="py-2 pr-3">Linked To</th>
-                      <th className="py-2 pr-3">Type</th>
-                      <th className="py-2 pr-3">Quantity</th>
-                      <th className="py-2 pr-3">Currency</th>
-                      <th className="py-2 pr-3">Unit Price</th>
-                      <th className="py-2 pr-3">Total Value</th>
-                      <th className="py-2 pr-3">Order Date</th>
-                      <th className="py-2 pr-3">Start Date</th>
-                      <th className="py-2 pr-3">Expiry Date</th>
-                      <th className="py-2 pr-3">Delivery Date</th>
-                      <th className="py-2 pr-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {purchaseOrders.map((po) => (
-                      <tr key={po.id} className="border-b">
-                        <td className="py-2 pr-3 font-medium">{po.purchase_order_no || "—"}</td>
-                        <td className="py-2 pr-3">{po.linked_name || "—"}</td>
-                        <td className="py-2 pr-3">
-                          <Badge variant="outline" className="capitalize">{po.linked_type || "client"}</Badge>
-                        </td>
-                        <td className="py-2 pr-3">{po.quantity ?? 0}</td>
-                        <td className="py-2 pr-3">{po.currency || "GBP"}</td>
-                        <td className="py-2 pr-3">£{Number(po.unit_price || 0).toFixed(2)}</td>
-                        <td className="py-2 pr-3">£{Number(po.total_value ?? Number(po.quantity || 0) * Number(po.unit_price || 0)).toFixed(2)}</td>
-                        <td className="py-2 pr-3">{po.order_date || "—"}</td>
-                        <td className="py-2 pr-3">{po.start_date || "—"}</td>
-                        <td className="py-2 pr-3">{po.expiry_date || "—"}</td>
-                        <td className="py-2 pr-3">{po.delivery_date || "—"}</td>
-                        <td className="py-2 pr-3">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditPurchaseOrderItem(po); setPurchaseOrderFormOpen(true); }}>
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deletePurchaseOrder(po.id)}>
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <PurchaseOrdersTable
+                purchaseOrders={purchaseOrders}
+                includeTypeColumn
+                onEdit={(po) => { setEditPurchaseOrderItem(po); setPurchaseOrderFormOpen(true); }}
+                onDelete={deletePurchaseOrder}
+              />
             </CardContent>
           </Card>
         )}

@@ -30,11 +30,11 @@ function statusCountLabel(invoices) {
 }
 
 function StatusTableRow({ label, invoices }) {
-  const total = invoices.reduce((s, inv) => s + (inv.total_amount || 0), 0);
   const income = invoices.filter((inv) => (inv.invoice_type || "income") === "income");
   const expense = invoices.filter((inv) => inv.invoice_type === "expense");
   const incomeTotal = income.reduce((s, inv) => s + (inv.total_amount || 0), 0);
   const expenseTotal = expense.reduce((s, inv) => s + (inv.total_amount || 0), 0);
+  const netTotal = incomeTotal - expenseTotal;
 
   return (
     <tr className="border-b border-border last:border-0">
@@ -50,8 +50,12 @@ function StatusTableRow({ label, invoices }) {
       <td className="py-3 px-2 align-middle text-right font-medium text-destructive tabular-nums">
         £{expenseTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
       </td>
-      <td className="py-3 pl-2 align-middle text-right font-semibold tabular-nums">
-        £{total.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+      <td
+        className={`py-3 pl-2 align-middle text-right font-semibold tabular-nums ${
+          netTotal > 0 ? "text-accent" : netTotal < 0 ? "text-destructive" : ""
+        }`}
+      >
+        £{netTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
       </td>
     </tr>
   );
@@ -66,9 +70,10 @@ export default function StatusOverview({ invoices }) {
     ? invoices
     : invoices.filter((inv) => new Date(inv.date).getFullYear() === parseInt(selectedYear));
 
-  const grandTotal = filtered.reduce((s, inv) => s + (inv.total_amount || 0), 0);
   const incomeTotal = filtered.filter((inv) => (inv.invoice_type || "income") === "income").reduce((s, inv) => s + (inv.total_amount || 0), 0);
   const expenseTotal = filtered.filter((inv) => inv.invoice_type === "expense").reduce((s, inv) => s + (inv.total_amount || 0), 0);
+  /** Net position: income minus expenses (not gross sum of both). */
+  const grandTotal = incomeTotal - expenseTotal;
 
   return (
     <Card className="shadow-sm">
@@ -100,8 +105,11 @@ export default function StatusOverview({ invoices }) {
             <p className="text-lg font-bold text-destructive">£{expenseTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-muted-foreground mb-1">Grand total</p>
-            <p className="text-lg font-bold">£{grandTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
+            <p className="text-xs text-muted-foreground mb-1">Net total</p>
+            <p className={`text-lg font-bold ${grandTotal > 0 ? "text-accent" : grandTotal < 0 ? "text-destructive" : ""}`}>
+              £{grandTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-1">Income − expenses</p>
           </div>
         </div>
 
@@ -114,7 +122,7 @@ export default function StatusOverview({ invoices }) {
                 <th scope="col" className="text-left font-semibold text-muted-foreground py-2 pr-4">Records</th>
                 <th scope="col" className="text-right font-semibold text-muted-foreground py-2 px-2">Income</th>
                 <th scope="col" className="text-right font-semibold text-muted-foreground py-2 px-2">Expense</th>
-                <th scope="col" className="text-right font-semibold text-muted-foreground py-2 pl-2">Total</th>
+                <th scope="col" className="text-right font-semibold text-muted-foreground py-2 pl-2">Net</th>
               </tr>
             </thead>
             <tbody>

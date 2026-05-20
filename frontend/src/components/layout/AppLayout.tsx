@@ -15,7 +15,7 @@ const navItems = [
     icon: FileText,
     children: [
       { label: "Additional Expenses", path: "/additional-expenses" },
-      { label: "Generate", path: "/generate" }
+      { label: "Invoicing", path: "/generate" }
     ]
   },
   { label: "Contracts", path: "/contacts", icon: Users },

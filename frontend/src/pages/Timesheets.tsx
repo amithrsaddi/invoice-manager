@@ -241,12 +241,13 @@ export default function Timesheets() {
         .map((dateKey) => new Date(`${dateKey}T00:00:00`)),
     [selectedDateKeys, monthEntries]
   );
-  const configuredHolidayDatesInMonth = useMemo(
-    () =>
-      Object.keys(publicHolidays)
-        .filter((dateKey) => dateKey.startsWith(`${monthKey}-`))
-        .map((dateKey) => new Date(`${dateKey}T00:00:00`)),
+  const publicHolidayDateKeysInMonth = useMemo(
+    () => Object.keys(publicHolidays).filter((dateKey) => dateKey.startsWith(`${monthKey}-`)),
     [publicHolidays, monthKey]
+  );
+  const configuredHolidayDatesInMonth = useMemo(
+    () => publicHolidayDateKeysInMonth.map((dateKey) => new Date(`${dateKey}T00:00:00`)),
+    [publicHolidayDateKeysInMonth]
   );
   const holidaysInYear = useMemo(
     () =>
@@ -263,10 +264,19 @@ export default function Timesheets() {
     (sum, entries) => sum + Object.values(entries).reduce((entrySum, entry) => entrySum + entry.hours, 0),
     0
   );
-  const publicHolidayCount = selectedDateKeys.reduce(
-    (sum, dateKey) => sum + (monthEntries[dateKey]?.isPublicHoliday ? 1 : 0),
-    0
-  );
+  /**
+   * Month view: count configured holidays in this month, plus any logged weekday marked as
+   * public holiday that is not in the global config (manual flag). Do not rely only on
+   * month entries — non-working configured holidays are removed from timesheet entries
+   * but still appear on the calendar and in the year table.
+   */
+  const publicHolidayCount = useMemo(() => {
+    const configuredSet = new Set(publicHolidayDateKeysInMonth);
+    const manualOnly = selectedDateKeys.filter(
+      (dateKey) => monthEntries[dateKey]?.isPublicHoliday && !configuredSet.has(dateKey)
+    ).length;
+    return publicHolidayDateKeysInMonth.length + manualOnly;
+  }, [publicHolidayDateKeysInMonth, selectedDateKeys, monthEntries]);
 
   const weekStart = startOfWeek(weekDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(weekDate, { weekStartsOn: 1 });
