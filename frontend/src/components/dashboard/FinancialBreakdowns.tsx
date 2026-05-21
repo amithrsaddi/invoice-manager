@@ -25,30 +25,46 @@ function calcStats(invoices) {
 
 function BreakdownRow({ label, stats }) {
   return (
-    <div className="border border-border rounded-xl overflow-hidden">
-      <div className="bg-muted/50 px-4 py-2 border-b border-border">
-        <p className="text-sm font-semibold">{label}</p>
+    <div className="border border-border rounded-lg overflow-hidden">
+      <div className="bg-muted/50 px-3 py-1.5 border-b border-border">
+        <p className="text-xs font-semibold">{label}</p>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 divide-x divide-y sm:divide-y-0 divide-border">
-        <div className="p-4">
-          <p className="text-xs text-muted-foreground mb-1">Gross Income</p>
-          <p className="text-lg font-bold text-accent">{fmt(stats.grossIncome)}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">VAT: {fmt(stats.vatIncome)}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border">
+        <div className="p-2.5 sm:p-3 min-w-0">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">Gross Income</p>
+          <p className="text-sm sm:text-base font-bold text-green-600 dark:text-green-500 break-words tabular-nums">
+            {fmt(stats.grossIncome)}
+          </p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 break-words">VAT: {fmt(stats.vatIncome)}</p>
         </div>
-        <div className="p-4">
-          <p className="text-xs text-muted-foreground mb-1">Gross Expenses</p>
-          <p className="text-lg font-bold text-destructive">{fmt(stats.grossExpenses)}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">VAT: {fmt(stats.vatExpenses)}</p>
+        <div className="p-2.5 sm:p-3 min-w-0">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">Gross Expenses</p>
+          <p className="text-sm sm:text-base font-bold text-amber-600 dark:text-orange-500 break-words tabular-nums">
+            {fmt(stats.grossExpenses)}
+          </p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 break-words">VAT: {fmt(stats.vatExpenses)}</p>
         </div>
-        <div className="p-4">
-          <p className="text-xs text-muted-foreground mb-1">Net Profit</p>
-          <p className={`text-lg font-bold ${stats.profit >= 0 ? "text-primary" : "text-destructive"}`}>{fmt(stats.profit)}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Net in − Net exp</p>
+        <div className="p-2.5 sm:p-3 min-w-0">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">Net Profit</p>
+          <p
+            className={`text-sm sm:text-base font-bold break-words tabular-nums ${
+              stats.profit >= 0 ? "text-sky-600 dark:text-cyan-500" : "text-destructive"
+            }`}
+          >
+            {fmt(stats.profit)}
+          </p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 leading-snug">Net Income − Net Expense</p>
         </div>
-        <div className="p-4">
-          <p className="text-xs text-muted-foreground mb-1">VAT Position</p>
-          <p className={`text-lg font-bold ${stats.vatPosition >= 0 ? "" : "text-destructive"}`}>{fmt(stats.vatPosition)}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Collected − Reclaimable</p>
+        <div className="p-2.5 sm:p-3 min-w-0">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">VAT Position</p>
+          <p
+            className={`text-sm sm:text-base font-bold break-words tabular-nums ${
+              stats.vatPosition >= 0 ? "text-teal-600 dark:text-teal-500" : "text-destructive"
+            }`}
+          >
+            {fmt(stats.vatPosition)}
+          </p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 leading-snug">Collected − Reclaimable</p>
         </div>
       </div>
     </div>
@@ -87,49 +103,54 @@ export default function FinancialBreakdowns({ invoices, year }) {
 
   const yearInvoices = isAllTime ? invoices : invoices.filter((inv) => new Date(inv.date).getFullYear() === year);
 
-  const titleSuffix = isAllTime ? "All Years" : year;
-
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">Financial Breakdowns — {titleSuffix}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {isAllTime ? (
-          <BreakdownRow label="All Years" stats={calcStats(invoices)} />
-        ) : (
-        <Tabs defaultValue="year">
-          <TabsList className="mb-4">
-            <TabsTrigger value="year">Year</TabsTrigger>
-            <TabsTrigger value="quarter">Quarter</TabsTrigger>
-            <TabsTrigger value="month">Month</TabsTrigger>
-          </TabsList>
-
-          {/* YEAR */}
-          <TabsContent value="year">
-            <BreakdownRow label={`Full Year ${year}`} stats={calcStats(yearInvoices)} />
-          </TabsContent>
-
-          {/* QUARTER */}
-          <TabsContent value="quarter">
-            <div className="space-y-4">
-              {QUARTERS.map((q) => (
-                <BreakdownRow key={q.label} label={q.label} stats={calcStats(invoicesInQuarter(q.months))} />
-              ))}
-            </div>
-          </TabsContent>
-
-          {/* MONTH */}
-          <TabsContent value="month">
-            <div className="space-y-4">
-              {MONTH_NAMES.map((name, i) => (
-                <BreakdownRow key={name} label={name} stats={calcStats(invoicesInMonth(i))} />
-              ))}
-            </div>
-          </TabsContent>
+    <Card className="h-full flex flex-col rounded-xl shadow-sm overflow-hidden min-w-0">
+      {isAllTime ? (
+        <>
+          <CardHeader className="px-3 py-3 pb-2 sm:px-4">
+            <CardTitle className="text-base font-semibold">Financial Breakdowns</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 px-3 pb-4 sm:px-4 overflow-x-hidden">
+            <BreakdownRow label="All Years" stats={calcStats(invoices)} />
+          </CardContent>
+        </>
+      ) : (
+        <Tabs defaultValue="year" className="flex h-full min-w-0 flex-col">
+          <CardHeader className="flex flex-col items-stretch gap-2 space-y-0 px-3 py-3 pb-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-4">
+            <CardTitle className="text-base font-semibold">Financial Breakdowns</CardTitle>
+            <TabsList className="mb-0 grid h-8 w-full grid-cols-3 sm:inline-flex sm:w-auto">
+              <TabsTrigger value="year" className="flex-1 px-1.5 text-[11px] sm:flex-none sm:px-2.5 sm:text-xs">
+                Year
+              </TabsTrigger>
+              <TabsTrigger value="quarter" className="flex-1 px-1.5 text-[11px] sm:flex-none sm:px-2.5 sm:text-xs">
+                Quarter
+              </TabsTrigger>
+              <TabsTrigger value="month" className="flex-1 px-1.5 text-[11px] sm:flex-none sm:px-2.5 sm:text-xs">
+                Month
+              </TabsTrigger>
+            </TabsList>
+          </CardHeader>
+          <CardContent className="flex-1 px-3 pb-4 sm:px-4 overflow-x-hidden">
+            <TabsContent value="year" className="mt-0">
+              <BreakdownRow label="Full year" stats={calcStats(yearInvoices)} />
+            </TabsContent>
+            <TabsContent value="quarter" className="mt-0">
+              <div className="space-y-3">
+                {QUARTERS.map((q) => (
+                  <BreakdownRow key={q.label} label={q.label} stats={calcStats(invoicesInQuarter(q.months))} />
+                ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="month" className="mt-0">
+              <div className="space-y-3">
+                {MONTH_NAMES.map((name, i) => (
+                  <BreakdownRow key={name} label={name} stats={calcStats(invoicesInMonth(i))} />
+                ))}
+              </div>
+            </TabsContent>
+          </CardContent>
         </Tabs>
-        )}
-      </CardContent>
+      )}
     </Card>
   );
 }
