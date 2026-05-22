@@ -189,6 +189,7 @@ const generatedRecordSchema = new mongoose.Schema(
     quantity: Number,
     unit_price: Number,
     vat_rate: Number,
+    line_items: [mongoose.Schema.Types.Mixed],
     vat_amount: Number,
     subtotal: Number,
     total_amount: Number,

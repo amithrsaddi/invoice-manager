@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Check, FileText, MoreHorizontal, Paperclip, Pencil, Trash2 } from "lucide-react";
+import { Check, FileText, MoreHorizontal, Paperclip, Pencil, Plus, Trash2 } from "lucide-react";
 import { formatDisplayDate } from "@/lib/utils";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
@@ -32,6 +32,69 @@ const buildSafeInvoicePdfName = (invoiceNo: string) => {
   const normalized = String(invoiceNo || "invoice").trim();
   return `${normalized.replace(/[^a-zA-Z0-9_-]+/g, "-") || "invoice"}.pdf`;
 };
+
+type LineItem = {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  vatRate: number;
+};
+
+const createLineItemId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+const createLineItem = (overrides: Partial<LineItem> = {}): LineItem => ({
+  id: createLineItemId(),
+  description: "Services rendered",
+  quantity: 1,
+  unitPrice: 0,
+  vatRate: 20,
+  ...overrides,
+});
+
+const calcLineSubtotal = (item: LineItem) => Math.max(0, item.quantity) * Math.max(0, item.unitPrice);
+
+const calcLineVat = (item: LineItem) => calcLineSubtotal(item) * (Math.max(0, item.vatRate) / 100);
+
+const calcTotalsFromLineItems = (items: LineItem[]) => {
+  const subtotal = items.reduce((sum, item) => sum + calcLineSubtotal(item), 0);
+  const vatAmount = items.reduce((sum, item) => sum + calcLineVat(item), 0);
+  return { subtotal, vatAmount, total: subtotal + vatAmount };
+};
+
+const lineItemsFromRecord = (record: any): LineItem[] => {
+  if (Array.isArray(record?.line_items) && record.line_items.length > 0) {
+    return record.line_items.map((item: any, index: number) =>
+      createLineItem({
+        id: item.id || `line-${index}`,
+        description: item.description || "",
+        quantity: Number(item.quantity) || 0,
+        unitPrice: Number(item.unit_price ?? item.unitPrice) || 0,
+        vatRate: Number(item.vat_rate ?? item.vatRate) ?? 20,
+      })
+    );
+  }
+  return [
+    createLineItem({
+      description: record?.description || "Services rendered",
+      quantity: Number(record?.quantity) || 0,
+      unitPrice: Number(record?.unit_price) || 0,
+      vatRate: Number(record?.vat_rate) ?? 20,
+    }),
+  ];
+};
+
+const serializeLineItems = (items: LineItem[]) =>
+  items.map((item) => ({
+    id: item.id,
+    description: item.description,
+    quantity: item.quantity,
+    unit_price: item.unitPrice,
+    vat_rate: item.vatRate,
+    line_subtotal: calcLineSubtotal(item),
+    line_vat: calcLineVat(item),
+    line_total: calcLineSubtotal(item) + calcLineVat(item),
+  }));
 
 export default function Generate() {
   const queryClient = useQueryClient();
@@ -61,10 +124,7 @@ export default function Generate() {
   const [invoiceDate, setInvoiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [purchaseOrder, setPurchaseOrder] = useState("");
   const [reference, setReference] = useState("");
-  const [description, setDescription] = useState("Services rendered");
-  const [quantity, setQuantity] = useState(1);
-  const [unitPrice, setUnitPrice] = useState(0);
-  const [vatRate, setVatRate] = useState(20);
+  const [lineItems, setLineItems] = useState<LineItem[]>(() => [createLineItem()]);
   const [vatRegNo, setVatRegNo] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
@@ -100,7 +160,31 @@ export default function Generate() {
   const applyPurchaseOrderToForm = (po: any) => {
     if (!po) return;
     setPurchaseOrder(po.purchase_order_no || "");
-    if (Number(po.unit_price) > 0) setUnitPrice(Number(po.unit_price));
+    if (Number(po.unit_price) > 0) {
+      setLineItems((prev) =>
+        prev.map((item, index) =>
+          index === 0 ? { ...item, unitPrice: Number(po.unit_price) } : item
+        )
+      );
+    }
+  };
+
+  const addLineItem = () => {
+    setLineItems((prev) => [
+      ...prev,
+      createLineItem({
+        description: "",
+        vatRate: prev[prev.length - 1]?.vatRate ?? 20,
+      }),
+    ]);
+  };
+
+  const removeLineItem = (id: string) => {
+    setLineItems((prev) => (prev.length <= 1 ? prev : prev.filter((item) => item.id !== id)));
+  };
+
+  const updateLineItem = (id: string, patch: Partial<LineItem>) => {
+    setLineItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   };
 
   const handleClientChange = (value: string) => {
@@ -108,9 +192,13 @@ export default function Generate() {
     setPurchaseOrder("");
   };
 
-  const subtotal = Math.max(0, quantity) * Math.max(0, unitPrice);
-  const vatAmount = subtotal * (Math.max(0, vatRate) / 100);
-  const total = subtotal + vatAmount;
+  const { subtotal, vatAmount, total } = useMemo(() => calcTotalsFromLineItems(lineItems), [lineItems]);
+  const primaryLine = lineItems[0];
+  const vatLabel = useMemo(() => {
+    if (lineItems.length === 0) return "VAT";
+    const firstRate = lineItems[0].vatRate;
+    return lineItems.every((item) => item.vatRate === firstRate) ? `VAT @ ${firstRate}%` : "VAT";
+  }, [lineItems]);
   const effectiveVatRegNo = vatRegNo || profile.vatRegistrationNumber || "";
 
   useEffect(() => {
@@ -137,13 +225,11 @@ export default function Generate() {
     purchaseOrder?: string;
     reference?: string;
     vatRegNo?: string;
-    description?: string;
-    quantity?: number;
-    unitPrice?: number;
-    vatRate?: number;
+    lineItems?: LineItem[];
     subtotal?: number;
     vatAmount?: number;
     total?: number;
+    vatLabel?: string;
   }) => {
     const activeClient = source?.client ?? selectedClient;
     const activeInvoiceNumber = source?.invoiceNumber ?? invoiceNumber;
@@ -151,13 +237,24 @@ export default function Generate() {
     const activePurchaseOrder = source?.purchaseOrder ?? purchaseOrder;
     const activeReference = source?.reference ?? reference;
     const activeVatRegNo = source?.vatRegNo ?? effectiveVatRegNo;
-    const activeDescription = source?.description ?? description;
-    const activeQuantity = source?.quantity ?? quantity;
-    const activeUnitPrice = source?.unitPrice ?? unitPrice;
-    const activeVatRate = source?.vatRate ?? vatRate;
-    const activeSubtotal = source?.subtotal ?? subtotal;
-    const activeVatAmount = source?.vatAmount ?? vatAmount;
-    const activeTotal = source?.total ?? total;
+    const activeLineItems = source?.lineItems ?? lineItems;
+    const activeTotals = source?.subtotal != null
+      ? { subtotal: source.subtotal, vatAmount: source.vatAmount ?? 0, total: source.total ?? 0 }
+      : calcTotalsFromLineItems(activeLineItems);
+    const activeSubtotal = activeTotals.subtotal;
+    const activeVatAmount = activeTotals.vatAmount;
+    const activeTotal = activeTotals.total;
+    const activeVatLabel =
+      source?.vatLabel ??
+      (activeLineItems.length > 0 && activeLineItems.every((item) => item.vatRate === activeLineItems[0].vatRate)
+        ? `VAT @ ${activeLineItems[0].vatRate}%`
+        : "VAT");
+    const lineRowsHtml = activeLineItems
+      .map((item) => {
+        const lineSubtotal = calcLineSubtotal(item);
+        return `<tr><td>${item.description || "—"}</td><td class="right">${item.quantity}</td><td class="right">£${item.unitPrice.toFixed(2)}</td><td class="right">£${lineSubtotal.toFixed(2)}</td></tr>`;
+      })
+      .join("");
     const toAddress = getContactAddress(activeClient);
     const fromAddressLines = [
       profile.companyAddressLine1,
@@ -243,12 +340,12 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
     <tr><th>Description</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Total</th></tr>
   </thead>
   <tbody>
-    <tr><td>${activeDescription || "—"}</td><td class="right">${activeQuantity}</td><td class="right">£${activeUnitPrice.toFixed(2)}</td><td class="right">£${activeSubtotal.toFixed(2)}</td></tr>
+    ${lineRowsHtml}
   </tbody>
 </table>
 <div class="totals">
   <div class="line"><span>Sub Total</span><strong>£${activeSubtotal.toFixed(2)}</strong></div>
-  <div class="line"><span>VAT @ ${activeVatRate}%</span><strong>£${activeVatAmount.toFixed(2)}</strong></div>
+  <div class="line"><span>${activeVatLabel}</span><strong>£${activeVatAmount.toFixed(2)}</strong></div>
   <div class="line grand"><span>Total</span><strong>£${activeTotal.toFixed(2)}</strong></div>
 </div>
 <div class="footer">
@@ -280,13 +377,11 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
       purchaseOrder?: string;
       reference?: string;
       vatRegNo?: string;
-      description?: string;
-      quantity?: number;
-      unitPrice?: number;
-      vatRate?: number;
+      lineItems?: LineItem[];
       subtotal?: number;
       vatAmount?: number;
       total?: number;
+      vatLabel?: string;
     },
     fallbackInvoiceNumber?: string
   ) => {
@@ -376,6 +471,8 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
     const clientForRecord =
       clients.find((client) => client.id === record.client_id) ||
       ({ name: record.client_name } as any);
+    const recordLineItems = lineItemsFromRecord(record);
+    const recordTotals = calcTotalsFromLineItems(recordLineItems);
     const generatedPdfAttachment = await downloadInvoicePdf(
       {
         client: clientForRecord,
@@ -384,13 +481,10 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
         purchaseOrder: record.purchase_order || "",
         reference: record.reference || "",
         vatRegNo: record.vat_registration_no || profile.vatRegistrationNumber || "",
-        description: record.description || "Services rendered",
-        quantity: Number(record.quantity) || 0,
-        unitPrice: Number(record.unit_price) || 0,
-        vatRate: Number(record.vat_rate) || 0,
-        subtotal: Number(record.subtotal) || 0,
-        vatAmount: Number(record.vat_amount) || 0,
-        total: Number(record.total_amount) || 0
+        lineItems: recordLineItems,
+        subtotal: Number(record.subtotal) || recordTotals.subtotal,
+        vatAmount: Number(record.vat_amount) || recordTotals.vatAmount,
+        total: Number(record.total_amount) || recordTotals.total,
       },
       record.invoice_number
     );
@@ -409,6 +503,7 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
     setSaving(true);
     setSaveMessage("");
     try {
+      const serializedLineItems = serializeLineItems(lineItems);
       const payload = {
         invoice_number: invoiceNumber,
         client_id: selectedClient.id,
@@ -417,10 +512,11 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
         purchase_order: purchaseOrder,
         reference,
         vat_registration_no: effectiveVatRegNo,
-        description,
-        quantity,
-        unit_price: unitPrice,
-        vat_rate: vatRate,
+        description: primaryLine?.description || "",
+        quantity: primaryLine?.quantity || 0,
+        unit_price: primaryLine?.unitPrice || 0,
+        vat_rate: primaryLine?.vatRate ?? 0,
+        line_items: serializedLineItems,
         vat_amount: vatAmount,
         subtotal,
         total_amount: total,
@@ -453,10 +549,7 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
     setPurchaseOrder(record.purchase_order || "");
     setReference(record.reference || "");
     setVatRegNo(record.vat_registration_no || profile.vatRegistrationNumber || "");
-    setDescription(record.description || "Services rendered");
-    setQuantity(Number(record.quantity) || 0);
-    setUnitPrice(Number(record.unit_price) || 0);
-    setVatRate(Number(record.vat_rate) || 0);
+    const loadedLineItems = lineItemsFromRecord(record);
     const matchedPo = purchaseOrders.find(
       (po) =>
         po.linked_type === "client" &&
@@ -464,8 +557,9 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
         po.purchase_order_no === (record.purchase_order || "")
     );
     if (matchedPo && Number(matchedPo.unit_price) > 0) {
-      setUnitPrice(Number(matchedPo.unit_price));
+      loadedLineItems[0] = { ...loadedLineItems[0], unitPrice: Number(matchedPo.unit_price) };
     }
+    setLineItems(loadedLineItems);
     setSaveMessage("Loaded record for editing.");
   };
 
@@ -492,14 +586,13 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
       total_amount: record.total_amount,
       notes: `PO: ${record.purchase_order || "-"} | Ref: ${record.reference || "-"}`,
       attachment: record.generated_pdf?.content_base64 ? record.generated_pdf : undefined,
-      items: [
-        {
-          description: record.description || "Services rendered",
-          quantity: record.quantity || 0,
-          unit_price: record.unit_price || 0,
-          total: record.subtotal || 0
-        }
-      ]
+      items: lineItemsFromRecord(record).map((item) => ({
+        description: item.description || "Services rendered",
+        quantity: item.quantity || 0,
+        unit_price: item.unitPrice || 0,
+        vat_rate: item.vatRate || 0,
+        total: calcLineSubtotal(item),
+      }))
     });
     await db.entities.GeneratedRecord.delete(record.id);
     queryClient.invalidateQueries({ queryKey: ["generated-records"] });
@@ -638,23 +731,74 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="space-y-1.5 md:col-span-2">
-              <Label>Description</Label>
-              <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
+          <div className="space-y-4">
+            <div className="flex flex-col gap-2 rounded-md border bg-muted/20 px-3 py-2 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm font-semibold">Line items</p>
+              <Button type="button" variant="outline" size="sm" className="h-8" onClick={addLineItem}>
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add line
+              </Button>
             </div>
-            <div className="space-y-1.5">
-              <Label>Qty</Label>
-              <Input type="number" min="0" value={quantity} onChange={(e) => setQuantity(Number(e.target.value) || 0)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Unit Price</Label>
-              <Input type="number" min="0" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(Number(e.target.value) || 0)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>VAT %</Label>
-              <Input type="number" min="0" step="0.01" value={vatRate} onChange={(e) => setVatRate(Number(e.target.value) || 0)} />
-            </div>
+            {lineItems.map((item, index) => (
+              <Card key={item.id} className="border-dashed">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm">Line {index + 1}</CardTitle>
+                  {lineItems.length > 1 ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeLineItem(item.id)}
+                      aria-label={`Remove line item ${index + 1}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  ) : null}
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div className="space-y-1.5 md:col-span-2">
+                      <Label>Description</Label>
+                      <Textarea
+                        rows={2}
+                        value={item.description}
+                        onChange={(e) => updateLineItem(item.id, { description: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Qty</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={item.quantity}
+                        onChange={(e) => updateLineItem(item.id, { quantity: Number(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Unit Price</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.unitPrice}
+                        onChange={(e) => updateLineItem(item.id, { unitPrice: Number(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>VAT %</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.vatRate}
+                        onChange={(e) => updateLineItem(item.id, { vatRate: Number(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           <div className="flex justify-end">
@@ -664,7 +808,7 @@ td{border-bottom:1px solid #d1d5db;padding:7px 6px;vertical-align:top}
                 <span className="font-semibold">£{subtotal.toFixed(2)}</span>
               </div>
               <div className="rounded-md border p-3 flex items-center justify-between">
-                <span>VAT</span>
+                <span>{vatLabel}</span>
                 <span className="font-semibold">£{vatAmount.toFixed(2)}</span>
               </div>
               <div className="rounded-md border p-3 flex items-center justify-between">

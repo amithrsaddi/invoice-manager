@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { db } from "@/api/dbClient";
 
 import { useQuery } from "@tanstack/react-query";
@@ -29,7 +30,45 @@ export function getDefaultInvoiceListFilters() {
   };
 }
 
+export type InvoiceListFilters = ReturnType<typeof getDefaultInvoiceListFilters>;
+
+type InvoiceListLocationState = {
+  invoiceFilters?: InvoiceListFilters;
+};
+
+/** Pending or outstanding — matches dashboard “pending income” totals. */
+export const OPEN_INCOME_STATUS = "open";
+
+/** Paid or cleared — matches dashboard net profit (settled income & expenses). */
+export const SETTLED_STATUS = "settled";
+
+export function buildInvoiceListFiltersFromPeriod(
+  year: number | "all",
+  type: "income" | "expense" | "all" = "all",
+  overrides?: Partial<InvoiceListFilters>
+): InvoiceListFilters {
+  const base = getDefaultInvoiceListFilters();
+  const period =
+    year === "all"
+      ? { ...base, type, year: "", quarter: "", month: "", date_from: "", date_to: "" }
+      : (() => {
+          const yearStr = String(year);
+          return {
+            ...base,
+            type,
+            year: `c-${yearStr}`,
+            quarter: "",
+            month: "",
+            date_from: `${yearStr}-01-01`,
+            date_to: `${yearStr}-12-31`,
+          };
+        })();
+  return { ...period, ...overrides };
+}
+
 export default function Invoices() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [filters, setFilters] = useState(getDefaultInvoiceListFilters);
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
@@ -49,7 +88,11 @@ export default function Invoices() {
   const filtered = useMemo(() => {
     return invoices.filter((inv) => {
       if (filters.type !== "all" && (inv.invoice_type || "income") !== filters.type) return false;
-      if (filters.status !== "all" && inv.status !== filters.status) return false;
+      if (filters.status === OPEN_INCOME_STATUS) {
+        if (inv.status !== "pending" && inv.status !== "outstanding") return false;
+      } else if (filters.status === SETTLED_STATUS) {
+        if (inv.status !== "paid" && inv.status !== "cleared") return false;
+      } else if (filters.status !== "all" && inv.status !== filters.status) return false;
       if (filters.client_id !== "all" && inv.client_id !== filters.client_id) return false;
       if (filters.date_from && inv.date < filters.date_from) return false;
       if (filters.date_to && inv.date > filters.date_to) return false;
@@ -72,6 +115,13 @@ export default function Invoices() {
   }, [filters]);
 
   const showClearAll = !filtersMatchDefault;
+
+  useEffect(() => {
+    const incoming = (location.state as InvoiceListLocationState | null)?.invoiceFilters;
+    if (!incoming) return;
+    setFilters(incoming);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.key, location.pathname, location.state, navigate]);
 
   useEffect(() => {
     setPage(1);

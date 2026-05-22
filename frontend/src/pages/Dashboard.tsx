@@ -1,5 +1,11 @@
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { db } from "@/api/dbClient";
+import {
+  buildInvoiceListFiltersFromPeriod,
+  OPEN_INCOME_STATUS,
+  SETTLED_STATUS,
+} from "@/pages/Invoices";
 import { useQuery } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import GradientStatCard from "../components/dashboard/GradientStatCard";
@@ -18,6 +24,7 @@ const pillSelectClass =
   "h-8 rounded-full border border-border bg-muted px-3 text-xs font-medium text-foreground shadow-none hover:bg-muted/80 focus:ring-2 focus:ring-ring [&>svg]:opacity-60 sm:text-sm sm:px-4 sm:h-9";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<DashboardPeriod>(currentYear);
   const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
@@ -113,6 +120,15 @@ export default function Dashboard() {
             { label: "Net", value: fmtGbp(yearlyNetIncome) },
             { label: "VAT", value: fmtGbp(yearlyIncomeVat) },
           ]}
+          onClick={() =>
+            navigate("/invoices", {
+              state: {
+                invoiceFilters: buildInvoiceListFiltersFromPeriod(selectedYear, "income", {
+                  status: SETTLED_STATUS,
+                }),
+              },
+            })
+          }
         />
         <GradientStatCard
           title="Expenses"
@@ -124,6 +140,11 @@ export default function Dashboard() {
             { label: "Net", value: fmtGbp(yearlyNetExpenses) },
             { label: "VAT", value: fmtGbp(yearlyExpenseVat) },
           ]}
+          onClick={() =>
+            navigate("/invoices", {
+              state: { invoiceFilters: buildInvoiceListFiltersFromPeriod(selectedYear, "expense") },
+            })
+          }
         />
         <GradientStatCard
           title="Net profit"
@@ -136,6 +157,15 @@ export default function Dashboard() {
           ]}
           gradient="bg-gradient-to-br from-[color-mix(in_srgb,#22d3ee_50%,white)] via-[color-mix(in_srgb,#38bdf8_50%,white)] to-[color-mix(in_srgb,#93c5fd_50%,white)] dark:from-cyan-600 dark:via-sky-600 dark:to-blue-500"
           shadowClass="shadow-[0_12px_28px_-8px_rgba(56,189,248,0.25)] dark:shadow-[0_12px_32px_-8px_rgba(14,165,233,0.35)]"
+          onClick={() =>
+            navigate("/invoices", {
+              state: {
+                invoiceFilters: buildInvoiceListFiltersFromPeriod(selectedYear, "all", {
+                  status: SETTLED_STATUS,
+                }),
+              },
+            })
+          }
         />
         <GradientStatCard
           title="Pending income"
@@ -143,6 +173,15 @@ export default function Dashboard() {
           details={[{ label: "Invoices", value: pendingList.length.toLocaleString("en-GB") }]}
           gradient="bg-gradient-to-br from-[color-mix(in_srgb,#2dd4bf_50%,white)] via-[color-mix(in_srgb,#14b8a6_50%,white)] to-[color-mix(in_srgb,#5eead4_50%,white)] dark:from-teal-600 dark:via-teal-700 dark:to-cyan-600"
           shadowClass="shadow-[0_12px_28px_-8px_rgba(45,212,191,0.25)] dark:shadow-[0_12px_32px_-8px_rgba(20,184,166,0.35)]"
+          onClick={() =>
+            navigate("/invoices", {
+              state: {
+                invoiceFilters: buildInvoiceListFiltersFromPeriod(selectedYear, "income", {
+                  status: OPEN_INCOME_STATUS,
+                }),
+              },
+            })
+          }
         />
       </div>
 

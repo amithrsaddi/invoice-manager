@@ -53,6 +53,51 @@ const createDefaultEntry = (dateKey: string, isPublicHoliday = false): Timesheet
   isPaidDay: getDefaultIsPaidDay(dateKey, isPublicHoliday)
 });
 const formatHours = (value: number) => (Number.isInteger(value) ? String(value) : value.toFixed(1));
+
+type YearMonthSummaryRow = {
+  label: string;
+  days: number;
+  availableDays: number;
+  notWorkedDays: number;
+  hours: number;
+  holidays: number;
+};
+
+function YearSummaryMetrics({
+  label,
+  days,
+  availableDays,
+  notWorkedDays,
+  hours,
+  holidays,
+  emphasized = false,
+}: YearMonthSummaryRow & { emphasized?: boolean }) {
+  return (
+    <div
+      className={
+        emphasized
+          ? "rounded-md border border-border bg-muted/40 p-3"
+          : "rounded-md border border-border p-3"
+      }
+    >
+      <p className={`mb-2 text-sm ${emphasized ? "font-semibold" : "font-medium"}`}>{label}</p>
+      <dl className="space-y-1.5">
+        {[
+          ["Worked", days],
+          ["Available", availableDays],
+          ["Not worked", notWorkedDays],
+          ["Hours", formatHours(hours)],
+          ["Holidays", holidays],
+        ].map(([metricLabel, metricValue]) => (
+          <div key={metricLabel} className="flex items-center justify-between gap-2">
+            <dt className="text-[11px] text-muted-foreground">{metricLabel}</dt>
+            <dd className="text-xs font-medium tabular-nums">{metricValue}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
 const calendarFillClassNames = {
   months: "w-full",
   month: "w-full space-y-4",
@@ -787,10 +832,10 @@ export default function Timesheets() {
 
         <TabsContent value="year" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between gap-3">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <span>Year summary</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center gap-2 sm:justify-end">
                   <Button
                     variant="outline"
                     size="icon"
@@ -809,33 +854,63 @@ export default function Timesheets() {
                 </div>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-md border overflow-hidden">
-                <div className="grid grid-cols-6 bg-muted px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <span>Month</span>
-                  <span>Days (Worked)</span>
-                  <span>Days (Available)</span>
-                  <span>Days (Not worked)</span>
-                  <span>Hours</span>
-                  <span>Public holidays</span>
-                </div>
+            <CardContent className="px-4 sm:px-6">
+              <div className="grid grid-cols-2 gap-2 lg:hidden">
                 {yearMonthSummaries.map((summary) => (
-                  <div key={summary.key} className="grid grid-cols-6 px-4 py-2 text-sm border-t">
-                    <span className="font-medium">{summary.label}</span>
-                    <span>{summary.days}</span>
-                    <span>{summary.availableDays}</span>
-                    <span>{summary.notWorkedDays}</span>
-                    <span>{formatHours(summary.hours)}</span>
-                    <span>{summary.holidays}</span>
-                  </div>
+                  <YearSummaryMetrics
+                    key={summary.key}
+                    label={summary.label}
+                    days={summary.days}
+                    availableDays={summary.availableDays}
+                    notWorkedDays={summary.notWorkedDays}
+                    hours={summary.hours}
+                    holidays={summary.holidays}
+                  />
                 ))}
-                <div className="grid grid-cols-6 px-4 py-2 text-sm border-t bg-muted/40 font-semibold">
-                  <span>Total</span>
-                  <span>{yearDaysLogged}</span>
-                  <span>{yearAvailableDays}</span>
-                  <span>{yearNotWorkedDays}</span>
-                  <span>{formatHours(yearHoursLogged)}</span>
-                  <span>{yearPublicHolidays}</span>
+                <div className="col-span-2">
+                  <YearSummaryMetrics
+                    label="Total"
+                    days={yearDaysLogged}
+                    availableDays={yearAvailableDays}
+                    notWorkedDays={yearNotWorkedDays}
+                    hours={yearHoursLogged}
+                    holidays={yearPublicHolidays}
+                    emphasized
+                  />
+                </div>
+              </div>
+
+              <div className="hidden lg:block rounded-md border overflow-x-auto">
+                <div className="min-w-[44rem]">
+                  <div className="grid grid-cols-6 bg-muted px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <span className="pr-2">Month</span>
+                    <span className="pr-2 whitespace-nowrap">Days (Worked)</span>
+                    <span className="pr-2 whitespace-nowrap">Days (Available)</span>
+                    <span className="pr-2 whitespace-nowrap">Days (Not worked)</span>
+                    <span className="pr-2">Hours</span>
+                    <span className="whitespace-nowrap">Public holidays</span>
+                  </div>
+                  {yearMonthSummaries.map((summary) => (
+                    <div
+                      key={summary.key}
+                      className="grid grid-cols-6 px-4 py-2 text-sm border-t tabular-nums"
+                    >
+                      <span className="pr-2 font-medium">{summary.label}</span>
+                      <span className="pr-2">{summary.days}</span>
+                      <span className="pr-2">{summary.availableDays}</span>
+                      <span className="pr-2">{summary.notWorkedDays}</span>
+                      <span className="pr-2">{formatHours(summary.hours)}</span>
+                      <span>{summary.holidays}</span>
+                    </div>
+                  ))}
+                  <div className="grid grid-cols-6 px-4 py-2 text-sm border-t bg-muted/40 font-semibold tabular-nums">
+                    <span className="pr-2">Total</span>
+                    <span className="pr-2">{yearDaysLogged}</span>
+                    <span className="pr-2">{yearAvailableDays}</span>
+                    <span className="pr-2">{yearNotWorkedDays}</span>
+                    <span className="pr-2">{formatHours(yearHoursLogged)}</span>
+                    <span>{yearPublicHolidays}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>

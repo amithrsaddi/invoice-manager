@@ -15,6 +15,7 @@ type GradientStatCardProps = {
   sparkData?: SparkPoint[];
   sparkStroke?: string;
   details?: StatDetail[];
+  onClick?: () => void;
 };
 
 export default function GradientStatCard({
@@ -26,6 +27,7 @@ export default function GradientStatCard({
   sparkData = [],
   sparkStroke,
   details,
+  onClick,
 }: GradientStatCardProps) {
   const isDark = useIsDarkMode();
   const gradientId = useId().replace(/:/g, "");
@@ -34,9 +36,26 @@ export default function GradientStatCard({
   const sparkFillTop = isDark ? "rgba(255,255,255,0.35)" : "rgba(30,41,59,0.12)";
   const showSpark = !details?.length && sparkData.length > 0;
 
+  const interactive = Boolean(onClick);
+
   return (
     <div
-      className={`relative h-full overflow-hidden rounded-xl p-3.5 min-h-[105px] flex flex-col justify-between ring-1 ring-black/5 dark:ring-white/15 ${gradient} ${shadowClass}`}
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
+      className={`relative h-full overflow-hidden rounded-xl p-3.5 min-h-[105px] flex flex-col justify-between ring-1 ring-black/5 dark:ring-white/15 ${gradient} ${shadowClass}${
+        interactive ? " cursor-pointer transition-opacity hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" : ""
+      }`}
     >
       <div className="relative z-10 flex flex-col">
         <p className="text-sm font-bold text-slate-700/90 dark:text-white/80">{title}</p>
