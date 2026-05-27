@@ -30,8 +30,11 @@ export default function Dashboard() {
   const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
   const { data: invoices = [], isLoading } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: () => db.entities.Invoice.list("-created_date")
+    queryKey: ["invoices", "dashboard", selectedYear],
+    queryFn: () =>
+      selectedYear === "all"
+        ? db.entities.Invoice.list("-created_date")
+        : db.entities.Invoice.list("-created_date", { year: selectedYear }),
   });
 
   const periodInvoices = useMemo(
@@ -63,6 +66,8 @@ export default function Dashboard() {
       (inv.invoice_type || "income") === "income"
   );
   const pendingAmount = pendingList.reduce((s, inv) => s + (inv.total_amount || 0), 0);
+  const pendingIncomeVat = pendingList.reduce((s, inv) => s + (inv.vat_amount || 0), 0);
+  const pendingNetIncome = pendingList.reduce((s, inv) => s + (inv.subtotal || 0), 0);
 
   const pendingExpenseList = periodInvoices.filter(
     (inv) =>
@@ -70,6 +75,8 @@ export default function Dashboard() {
       inv.invoice_type === "expense"
   );
   const pendingExpenseAmount = pendingExpenseList.reduce((s, inv) => s + (inv.total_amount || 0), 0);
+  const pendingExpenseVat = pendingExpenseList.reduce((s, inv) => s + (inv.vat_amount || 0), 0);
+  const pendingNetExpense = pendingExpenseList.reduce((s, inv) => s + (inv.subtotal || 0), 0);
 
   const periodLabel = selectedYear === "all" ? "All years" : String(selectedYear);
 
@@ -176,8 +183,12 @@ export default function Dashboard() {
         />
         <GradientStatCard
           title="Pending income"
-          value={`£${pendingAmount.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-          details={[{ label: "Invoices", value: pendingList.length.toLocaleString("en-GB") }]}
+          value={fmtGbp(pendingAmount)}
+          details={[
+            { label: "Invoices", value: pendingList.length.toLocaleString("en-GB") },
+            { label: "Net", value: fmtGbp(pendingNetIncome) },
+            { label: "VAT", value: fmtGbp(pendingIncomeVat) },
+          ]}
           gradient="bg-gradient-to-br from-[color-mix(in_srgb,#2dd4bf_50%,white)] via-[color-mix(in_srgb,#14b8a6_50%,white)] to-[color-mix(in_srgb,#5eead4_50%,white)] dark:from-teal-600 dark:via-teal-700 dark:to-cyan-600"
           shadowClass="shadow-[0_12px_28px_-8px_rgba(45,212,191,0.25)] dark:shadow-[0_12px_32px_-8px_rgba(20,184,166,0.35)]"
           onClick={() =>
@@ -192,8 +203,12 @@ export default function Dashboard() {
         />
         <GradientStatCard
           title="Pending expense"
-          value={`£${pendingExpenseAmount.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-          details={[{ label: "Invoices", value: pendingExpenseList.length.toLocaleString("en-GB") }]}
+          value={fmtGbp(pendingExpenseAmount)}
+          details={[
+            { label: "Invoices", value: pendingExpenseList.length.toLocaleString("en-GB") },
+            { label: "Net", value: fmtGbp(pendingNetExpense) },
+            { label: "VAT", value: fmtGbp(pendingExpenseVat) },
+          ]}
           gradient="bg-gradient-to-br from-[color-mix(in_srgb,#fb7185_50%,white)] via-[color-mix(in_srgb,#f97316_50%,white)] to-[color-mix(in_srgb,#fdba74_50%,white)] dark:from-rose-600 dark:via-orange-600 dark:to-amber-500"
           shadowClass="shadow-[0_12px_28px_-8px_rgba(251,113,133,0.25)] dark:shadow-[0_12px_32px_-8px_rgba(249,115,22,0.35)]"
           onClick={() =>

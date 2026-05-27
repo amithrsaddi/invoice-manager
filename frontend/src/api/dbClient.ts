@@ -49,7 +49,18 @@ const request = async <T = unknown>(path: string, options: RequestOptions = {}):
 };
 
 const createEntityClient = (route: string) => ({
-  list: (sort?: string) => request(`/${route}${sort ? `?sort=${encodeURIComponent(sort)}` : ""}`),
+  list: (sort?: string, query?: Record<string, string | number>) => {
+    const params = new URLSearchParams();
+    if (sort) params.set("sort", sort);
+    if (query) {
+      for (const [key, value] of Object.entries(query)) {
+        if (value === undefined || value === null) continue;
+        params.set(key, String(value));
+      }
+    }
+    const qs = params.toString();
+    return request(`/${route}${qs ? `?${qs}` : ""}`);
+  },
   get: (id: string) => request(`/${route}/${id}`),
   create: (payload: unknown) =>
     request(`/${route}`, { method: "POST", body: JSON.stringify(payload) }),

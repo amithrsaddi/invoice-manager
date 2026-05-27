@@ -51,6 +51,7 @@ const invoiceSchema = new mongoose.Schema(
   },
   { versionKey: false }
 );
+invoiceSchema.index({ user_id: 1, date: 1 });
 
 const clientSchema = new mongoose.Schema(
   {
@@ -228,6 +229,14 @@ const parseSort = (sort) => {
   return { [sort]: 1 };
 };
 
+/** Calendar-year slice plus previous December (for UK-style Q1 in Financial Breakdowns). */
+const invoiceYearRangeFilter = (year: number) => ({
+  $or: [
+    { date: { $gte: `${year}-01-01`, $lt: `${year + 1}-01-01` } },
+    { date: { $gte: `${year - 1}-12-01`, $lt: `${year}-01-01` } },
+  ],
+});
+
 const getUserId = (req) => req.headers["x-user-id"];
 
 app.post("/api/auth/register", async (req, res) => {
@@ -282,7 +291,19 @@ Object.entries(models).forEach(([route, Model]) => {
   app.get(`/api/${route}`, async (req, res) => {
     const userId = getUserId(req);
     if (!userId) return res.status(401).json({ error: "Missing user id" });
-    const docs = await Model.find({ user_id: userId }).sort(parseSort(req.query.sort));
+    const filter = { user_id: userId };
+    if (route === "invoices") {
+      const rawYear = req.query.year;
+      const yearStr = rawYear === undefined || rawYear === null ? "" : String(rawYear).trim();
+      if (yearStr && yearStr !== "all") {
+        const y = Number(yearStr);
+        if (!Number.isInteger(y) || y < 1900 || y > 2100) {
+          return res.status(400).json({ error: "Invalid year" });
+        }
+        Object.assign(filter, invoiceYearRangeFilter(y));
+      }
+    }
+    const docs = await Model.find(filter).sort(parseSort(req.query.sort));
     res.json(docs.map(mapId));
   });
 

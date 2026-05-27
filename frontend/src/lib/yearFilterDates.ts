@@ -152,3 +152,30 @@ export const FY_APR_MAR_QUARTER_LABELS: Record<string, string> = {
   cq3: "Q3 — Oct, Nov, Dec",
   cq4: "Q4 — Jan, Feb, Mar",
 };
+
+/**
+ * When the selected `date_from` / `date_to` range fits entirely inside one GET /api/invoices?year=Y
+ * bucket (December Y−1 through end of calendar Y, matching the backend), returns that Y so the
+ * client can fetch a slice instead of all years. Otherwise returns undefined (fetch all).
+ */
+export function getInvoiceListApiYearFromDateRange(dateFrom: string, dateTo: string): number | undefined {
+  const from = String(dateFrom || "").trim();
+  const to = String(dateTo || "").trim();
+  if (!from || !to || from > to) return undefined;
+
+  const ty = parseInt(to.slice(0, 4), 10);
+  const fy = parseInt(from.slice(0, 4), 10);
+  if (!Number.isFinite(ty) || !Number.isFinite(fy)) return undefined;
+
+  const candidates = new Set<number>();
+  for (let d = fy - 1; d <= ty + 1; d++) {
+    if (d >= 1900 && d <= 2100) candidates.add(d);
+  }
+
+  for (const y of candidates) {
+    const bucketStart = `${y - 1}-12-01`;
+    const bucketEndExclusive = `${y + 1}-01-01`;
+    if (from >= bucketStart && to < bucketEndExclusive) return y;
+  }
+  return undefined;
+}

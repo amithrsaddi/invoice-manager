@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus, Download, FileText } from "lucide-react";
 import InvoiceFilters from "../components/invoices/InvoiceFilters";
-import { normalizeYearFilterValue } from "@/lib/yearFilterDates";
+import { getInvoiceListApiYearFromDateRange, normalizeYearFilterValue } from "@/lib/yearFilterDates";
 import InvoiceTable from "../components/invoices/InvoiceTable";
 import InvoiceFormDialog from "../components/invoices/InvoiceFormDialog";
 import InvoiceDetailDialog from "../components/invoices/InvoiceDetailDialog";
@@ -75,9 +75,17 @@ export default function Invoices() {
   const [editInvoice, setEditInvoice] = useState(null);
   const [viewInvoice, setViewInvoice] = useState(null);
 
+  const invoiceListApiYear = useMemo(
+    () => getInvoiceListApiYearFromDateRange(filters.date_from, filters.date_to),
+    [filters.date_from, filters.date_to]
+  );
+
   const { data: invoices = [], isLoading } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: () => db.entities.Invoice.list("-date"),
+    queryKey: ["invoices", "list", invoiceListApiYear ?? "all"],
+    queryFn: () =>
+      invoiceListApiYear !== undefined
+        ? db.entities.Invoice.list("-date", { year: invoiceListApiYear })
+        : db.entities.Invoice.list("-date"),
   });
 
   const { data: clients = [] } = useQuery({
@@ -192,7 +200,11 @@ export default function Invoices() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Invoices & Expenses</h1>
-          <p className="text-muted-foreground mt-1">{invoices.length} total · {filtered.length} shown</p>
+          <p className="text-muted-foreground mt-1">
+            {invoiceListApiYear !== undefined
+              ? `${invoices.length} loaded for this date range · ${filtered.length} shown`
+              : `${invoices.length} total · ${filtered.length} shown`}
+          </p>
         </div>
         <Button onClick={() => { setEditInvoice(null); setFormOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" /> New Invoice or Expense
