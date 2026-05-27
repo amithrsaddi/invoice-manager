@@ -64,6 +64,13 @@ export default function Dashboard() {
   );
   const pendingAmount = pendingList.reduce((s, inv) => s + (inv.total_amount || 0), 0);
 
+  const pendingExpenseList = periodInvoices.filter(
+    (inv) =>
+      (inv.status === "pending" || inv.status === "outstanding") &&
+      inv.invoice_type === "expense"
+  );
+  const pendingExpenseAmount = pendingExpenseList.reduce((s, inv) => s + (inv.total_amount || 0), 0);
+
   const periodLabel = selectedYear === "all" ? "All years" : String(selectedYear);
 
   if (isLoading) {
@@ -109,7 +116,7 @@ export default function Dashboard() {
       </div>
 
       {/* Gradient overview cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 items-stretch [&>*]:h-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 items-stretch [&>*]:h-full">
         <GradientStatCard
           title="Income"
           value={fmtGbp(yearlyGrossIncome)}
@@ -177,6 +184,22 @@ export default function Dashboard() {
             navigate("/invoices", {
               state: {
                 invoiceFilters: buildInvoiceListFiltersFromPeriod(selectedYear, "income", {
+                  status: OPEN_INCOME_STATUS,
+                }),
+              },
+            })
+          }
+        />
+        <GradientStatCard
+          title="Pending expense"
+          value={`£${pendingExpenseAmount.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+          details={[{ label: "Invoices", value: pendingExpenseList.length.toLocaleString("en-GB") }]}
+          gradient="bg-gradient-to-br from-[color-mix(in_srgb,#fb7185_50%,white)] via-[color-mix(in_srgb,#f97316_50%,white)] to-[color-mix(in_srgb,#fdba74_50%,white)] dark:from-rose-600 dark:via-orange-600 dark:to-amber-500"
+          shadowClass="shadow-[0_12px_28px_-8px_rgba(251,113,133,0.25)] dark:shadow-[0_12px_32px_-8px_rgba(249,115,22,0.35)]"
+          onClick={() =>
+            navigate("/invoices", {
+              state: {
+                invoiceFilters: buildInvoiceListFiltersFromPeriod(selectedYear, "expense", {
                   status: OPEN_INCOME_STATUS,
                 }),
               },

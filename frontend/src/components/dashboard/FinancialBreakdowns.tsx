@@ -83,14 +83,20 @@ const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "Ju
 export default function FinancialBreakdowns({ invoices, year }) {
   const isAllTime = year === "all";
 
-  // For Q1 (Dec, Jan, Feb): Dec belongs to prev year
-  function invoicesInMonth(month) {
+  function invoicesInCalendarMonth(month) {
+    return invoices.filter((inv) => {
+      const d = new Date(inv.date);
+      return d.getMonth() === month && d.getFullYear() === year;
+    });
+  }
+
+  // Q1 (Dec, Jan, Feb): December belongs to the previous calendar year
+  function invoicesInTaxMonth(month) {
     return invoices.filter((inv) => {
       const d = new Date(inv.date);
       const m = d.getMonth();
       const y = d.getFullYear();
       if (month === 11) {
-        // December of the previous year
         return m === 11 && y === year - 1;
       }
       return m === month && y === year;
@@ -98,7 +104,7 @@ export default function FinancialBreakdowns({ invoices, year }) {
   }
 
   function invoicesInQuarter(months) {
-    return months.flatMap((m) => invoicesInMonth(m));
+    return months.flatMap((m) => invoicesInTaxMonth(m));
   }
 
   const yearInvoices = isAllTime ? invoices : invoices.filter((inv) => new Date(inv.date).getFullYear() === year);
@@ -144,7 +150,7 @@ export default function FinancialBreakdowns({ invoices, year }) {
             <TabsContent value="month" className="mt-0">
               <div className="space-y-3">
                 {MONTH_NAMES.map((name, i) => (
-                  <BreakdownRow key={name} label={name} stats={calcStats(invoicesInMonth(i))} />
+                  <BreakdownRow key={name} label={name} stats={calcStats(invoicesInCalendarMonth(i))} />
                 ))}
               </div>
             </TabsContent>
