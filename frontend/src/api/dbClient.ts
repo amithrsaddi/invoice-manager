@@ -102,5 +102,13 @@ export const db = {
     Profile: createEntityClient("profile"),
     GeneratedRecord: createEntityClient("generated-records"),
     PurchaseOrder: createEntityClient("purchase-orders")
+  },
+  backup: {
+    export: () => request("/backup"),
+    restore: (backup: unknown, mode: "merge" | "replace" = "replace") =>
+      request<{ ok: boolean; mode: string; restored: Record<string, number> }>("/restore", {
+        method: "POST",
+        body: JSON.stringify({ backup, mode })
+      })
   }
 };

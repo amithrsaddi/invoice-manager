@@ -248,6 +248,115 @@ const json = (statusCode, body) => ({
   body: body == null ? "" : JSON.stringify(body)
 });
 
+const BACKUP_VERSION = 1;
+const BACKUP_COLLECTIONS = [
+  "clients",
+  "suppliers",
+  "purchase-orders",
+  "invoices",
+  "additional-expenses",
+  "recurring-schedules",
+  "generated-records",
+  "profile",
+  "timesheet-state"
+];
+
+const stripForExport = (doc) => {
+  const obj = mapId(doc);
+  const { user_id, ...rest } = obj;
+  return rest;
+};
+
+const remapReference = (value, idMaps) => {
+  if (!value || typeof value !== "string") return value;
+  return idMaps.clients[value] || idMaps.suppliers[value] || value;
+};
+
+const prepareRecordForRestore = (record, route, userId, idMaps) => {
+  const { id, user_id, _backup_id, ...fields } = record;
+  const payload = { ...fields, user_id: userId, updated_date: new Date() };
+
+  if (route === "invoices" || route === "recurring-schedules" || route === "generated-records") {
+    if (payload.client_id) payload.client_id = remapReference(payload.client_id, idMaps);
+  }
+
+  if (route === "purchase-orders" && payload.linked_id) {
+    const linkedType = String(payload.linked_type || "").toLowerCase();
+    if (linkedType === "client" || linkedType === "clients") {
+      payload.linked_id = idMaps.clients[payload.linked_id] || payload.linked_id;
+    } else if (linkedType === "supplier" || linkedType === "suppliers") {
+      payload.linked_id = idMaps.suppliers[payload.linked_id] || payload.linked_id;
+    } else {
+      payload.linked_id = remapReference(payload.linked_id, idMaps);
+    }
+  }
+
+  return { oldId: id || _backup_id, payload };
+};
+
+const handleBackup = async (userId) => {
+  const data = {};
+  const counts = {};
+
+  for (const route of BACKUP_COLLECTIONS) {
+    const Model = modelMap[route];
+    const docs = await Model.find({ user_id: userId }).sort({ created_date: 1 });
+    data[route] = docs.map(stripForExport);
+    counts[route] = docs.length;
+  }
+
+  return {
+    version: BACKUP_VERSION,
+    exported_at: new Date().toISOString(),
+    app: "invoice-manager",
+    source_user_id: userId,
+    data,
+    meta: { counts }
+  };
+};
+
+const handleRestore = async (userId, backup, mode) => {
+  const idMaps = { clients: {}, suppliers: {} };
+  const restored = {};
+
+  if (mode === "replace") {
+    for (const route of BACKUP_COLLECTIONS) {
+      await modelMap[route].deleteMany({ user_id: userId });
+    }
+  }
+
+  for (const route of BACKUP_COLLECTIONS) {
+    const Model = modelMap[route];
+    const records = Array.isArray(backup.data[route]) ? backup.data[route] : [];
+    let count = 0;
+
+    for (const record of records) {
+      const { oldId, payload } = prepareRecordForRestore(record, route, userId, idMaps);
+
+      if (route === "profile" || route === "timesheet-state") {
+        await Model.findOneAndUpdate(
+          { user_id: userId },
+          { ...payload, user_id: userId, updated_date: new Date() },
+          { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
+        count += 1;
+        continue;
+      }
+
+      const doc = await Model.create(payload);
+      count += 1;
+
+      if (oldId && (route === "clients" || route === "suppliers")) {
+        idMaps[route][oldId] = doc._id.toString();
+      }
+    }
+
+    restored[route] = count;
+  }
+
+  return { ok: true, mode, restored };
+};
+
 export const handler = async (event) => {
   try {
     await connectDb();
@@ -261,6 +370,28 @@ export const handler = async (event) => {
     const payload = event.body ? JSON.parse(event.body) : null;
 
     if (path === "health") return json(200, { ok: true });
+
+    if (route === "backup" && method === "GET") {
+      const userId = getUserId(event);
+      if (!userId) return json(401, { error: "Missing user id" });
+      const backup = await handleBackup(userId);
+      return json(200, backup);
+    }
+
+    if (route === "restore" && method === "POST") {
+      const userId = getUserId(event);
+      if (!userId) return json(401, { error: "Missing user id" });
+      const backup = payload?.backup ?? payload;
+      const mode = payload?.mode === "merge" ? "merge" : "replace";
+      if (!backup?.data || backup.app !== "invoice-manager") {
+        return json(400, { error: "Invalid backup file format" });
+      }
+      if (backup.version && backup.version > BACKUP_VERSION) {
+        return json(400, { error: "Backup version is newer than this app supports" });
+      }
+      const result = await handleRestore(userId, backup, mode);
+      return json(200, result);
+    }
 
     if (route === "auth") {
       if (method === "POST" && id === "register") {

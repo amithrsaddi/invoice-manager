@@ -19,6 +19,7 @@ import Auth from './pages/Auth';
 import Profile from './pages/Profile';
 import Generate from './pages/Generate';
 import Settings from './pages/Settings';
+import BackupRestore from './pages/BackupRestore';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated } = useAuth();
@@ -53,6 +54,7 @@ const AuthenticatedApp = () => {
         <Route path="/generate" element={<Generate />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/backup-restore" element={<BackupRestore />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/activity" element={<Activity />} />
       </Route>

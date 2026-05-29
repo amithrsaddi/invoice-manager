@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, FileText, Users, BarChart2, Repeat, PieChart, Menu, X, LogOut, Activity as ActivityIcon, CalendarCheck, Moon, UserCircle2, ChevronDown, ChevronRight, Settings as SettingsIcon } from "lucide-react";
+import { LayoutDashboard, FileText, Users, BarChart2, Repeat, PieChart, Menu, X, LogOut, Activity as ActivityIcon, CalendarCheck, Moon, UserCircle2, ChevronDown, ChevronRight, Settings as SettingsIcon, DatabaseBackup } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { db } from "@/api/dbClient";
@@ -64,7 +64,10 @@ export default function AppLayout() {
     return `${first} ${last}`.trim() || "Profile";
   }, [profileDocs]);
 
-  const systemNavItems = [{ label: "Settings", path: "/settings", icon: SettingsIcon }];
+  const systemNavItems = [
+    { label: "Settings", path: "/settings", icon: SettingsIcon },
+    { label: "Backup & Restore", path: "/backup-restore", icon: DatabaseBackup },
+  ];
 
   const toggleTheme = () => {
     const nextIsDark = !isDark;
