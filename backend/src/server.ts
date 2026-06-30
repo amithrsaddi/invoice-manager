@@ -66,7 +66,8 @@ const clientSchema = new mongoose.Schema(
     townCity: String,
     county: String,
     postcode: String,
-    notes: String
+    notes: String,
+    status: { type: String, default: "active" }
   },
   { versionKey: false }
 );
@@ -83,7 +84,8 @@ const supplierSchema = new mongoose.Schema(
     townCity: String,
     county: String,
     postcode: String,
-    notes: String
+    notes: String,
+    status: { type: String, default: "active" }
   },
   { versionKey: false }
 );

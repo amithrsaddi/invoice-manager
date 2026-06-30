@@ -4,63 +4,16 @@ import { db } from "@/api/dbClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Mail, Phone, MapPin, Pencil, Trash2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Plus } from "lucide-react";
 import ClientFormDialog from "../components/clients/ClientFormDialog";
 import SupplierFormDialog from "../components/suppliers/SupplierFormDialog";
 import PurchaseOrderFormDialog from "../components/purchase-orders/PurchaseOrderFormDialog";
 import PurchaseOrdersTable from "../components/purchase-orders/PurchaseOrdersTable";
+import ContactListTable from "../components/contacts/ContactListTable";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-function ContactCard({ name, color = "primary", email, phone, address, invoiceCount, total, onEdit, onDelete }) {
-  return (
-    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }}>
-      <Card className="hover:shadow-lg transition-shadow duration-300">
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-11 h-11 rounded-full bg-${color}/10 flex items-center justify-center`}>
-                <span className={`text-${color} font-bold text-lg`}>{name?.[0]?.toUpperCase()}</span>
-              </div>
-              <div>
-                <h3 className="font-semibold">{name}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {invoiceCount} {invoiceCount === 1 ? "invoice" : "invoices"} · £{total.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}><Pencil className="w-3.5 h-3.5" /></Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete}><Trash2 className="w-3.5 h-3.5" /></Button>
-            </div>
-          </div>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            {email && <div className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" />{email}</div>}
-            {phone && <div className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" />{phone}</div>}
-            {address && <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" />{address}</div>}
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
-
-function formatContactAddress(contact) {
-  const structured = [
-    contact?.addressLine1,
-    contact?.addressLine2,
-    contact?.townCity,
-    contact?.county,
-    contact?.postcode
-  ]
-    .map((part) => String(part || "").trim())
-    .filter(Boolean)
-    .join(", ");
-  return structured || contact?.address || "";
-}
 
 export default function Contacts() {
   const queryClient = useQueryClient();
@@ -167,30 +120,17 @@ export default function Contacts() {
             </Button>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <AnimatePresence>
-              {clients.map((c) => {
-                const stats = getClientStats(c);
-                return (
-                  <ContactCard
-                    key={c.id}
-                    name={c.name}
-                    color="primary"
-                    email={c.email}
-                    phone={c.phone}
-                    address={formatContactAddress(c)}
-                    invoiceCount={stats.count}
-                    total={stats.total}
-                    onEdit={() => {
-                      setEditClient(c);
-                      setClientFormOpen(true);
-                    }}
-                    onDelete={() => setDeleteTarget({ id: c.id, type: "client" })}
-                  />
-                );
-              })}
-            </AnimatePresence>
-          </div>
+          <ContactListTable
+            contacts={clients}
+            nameColumnLabel="Client name"
+            getStats={getClientStats}
+            avatarClassName="bg-primary/10 text-primary"
+            onEdit={(client) => {
+              setEditClient(client);
+              setClientFormOpen(true);
+            }}
+            onDelete={(client) => setDeleteTarget({ id: client.id, type: "client" })}
+          />
         )}
       </section>
 
@@ -211,30 +151,17 @@ export default function Contacts() {
             </Button>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <AnimatePresence>
-              {suppliers.map((s) => {
-                const stats = getSupplierStats(s.name);
-                return (
-                  <ContactCard
-                    key={s.id}
-                    name={s.name}
-                    color="destructive"
-                    email={s.email}
-                    phone={s.phone}
-                    address={formatContactAddress(s)}
-                    invoiceCount={stats.count}
-                    total={stats.total}
-                    onEdit={() => {
-                      setEditSupplier(s);
-                      setSupplierFormOpen(true);
-                    }}
-                    onDelete={() => setDeleteTarget({ id: s.id, type: "supplier" })}
-                  />
-                );
-              })}
-            </AnimatePresence>
-          </div>
+          <ContactListTable
+            contacts={suppliers}
+            nameColumnLabel="Supplier name"
+            getStats={(supplier) => getSupplierStats(supplier.name || "")}
+            avatarClassName="bg-destructive/10 text-destructive"
+            onEdit={(supplier) => {
+              setEditSupplier(supplier);
+              setSupplierFormOpen(true);
+            }}
+            onDelete={(supplier) => setDeleteTarget({ id: supplier.id, type: "supplier" })}
+          />
         )}
       </section>
 
@@ -255,16 +182,12 @@ export default function Contacts() {
             </Button>
           </Card>
         ) : (
-          <Card>
-            <CardContent className="p-4">
-              <PurchaseOrdersTable
-                purchaseOrders={purchaseOrders}
-                includeTypeColumn
-                onEdit={(po) => { setEditPurchaseOrderItem(po); setPurchaseOrderFormOpen(true); }}
-                onDelete={deletePurchaseOrder}
-              />
-            </CardContent>
-          </Card>
+          <PurchaseOrdersTable
+            purchaseOrders={purchaseOrders}
+            includeTypeColumn
+            onEdit={(po) => { setEditPurchaseOrderItem(po); setPurchaseOrderFormOpen(true); }}
+            onDelete={deletePurchaseOrder}
+          />
         )}
       </section>
 

@@ -9,11 +9,12 @@ import {
   startOfMonth,
   startOfWeek
 } from "date-fns";
-import { CalendarCheck, CalendarDays, ChevronLeft, ChevronRight, Clock3, Pencil, Settings, Trash2 } from "lucide-react";
+import { Briefcase, CalendarCheck, CalendarClock, CalendarDays, CalendarMinus, CalendarRange, ChevronLeft, ChevronRight, Pencil, Settings, Trash2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +22,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { useQuery } from "@tanstack/react-query";
 import { db } from "@/api/dbClient";
+import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
 
 const DEFAULT_WORKING_DAY_HOURS = 8;
 const LEGACY_TIMESHEETS_KEY = "invoice_manager_timesheets_by_month";
@@ -32,6 +35,7 @@ type TimesheetDayEntry = {
   hours: number;
   isPublicHoliday: boolean;
   isPaidDay: boolean;
+  isDayOff: boolean;
 };
 type TimesheetDayRecord = TimesheetDayEntry & { id?: string };
 type TimesheetStore = Record<string, Record<string, TimesheetDayRecord>>;
@@ -50,9 +54,66 @@ const getDefaultIsPaidDay = (dateKey: string, isPublicHoliday: boolean) =>
 const createDefaultEntry = (dateKey: string, isPublicHoliday = false): TimesheetDayEntry => ({
   hours: DEFAULT_WORKING_DAY_HOURS,
   isPublicHoliday,
-  isPaidDay: getDefaultIsPaidDay(dateKey, isPublicHoliday)
+  isPaidDay: getDefaultIsPaidDay(dateKey, isPublicHoliday),
+  isDayOff: false
 });
 const formatHours = (value: number) => (Number.isInteger(value) ? String(value) : value.toFixed(1));
+
+const countMonthPublicHolidays = (
+  monthKey: string,
+  monthEntriesForMonth: Record<string, TimesheetDayEntry>,
+  holidays: PublicHolidayConfig
+) => {
+  const configuredDateKeys = Object.keys(holidays).filter((dateKey) => dateKey.startsWith(`${monthKey}-`));
+  const configuredSet = new Set(configuredDateKeys);
+  const manualOnly = Object.keys(monthEntriesForMonth).filter(
+    (dateKey) => monthEntriesForMonth[dateKey]?.isPublicHoliday && !configuredSet.has(dateKey)
+  ).length;
+  return configuredDateKeys.length + manualOnly;
+};
+
+const countMonthDaysOff = (monthEntriesForMonth: Record<string, TimesheetDayEntry>) =>
+  Object.values(monthEntriesForMonth).filter((entry) => entry.isDayOff).length;
+
+const computeMonthAvailableDays = (monthDate: Date, holidays: PublicHolidayConfig) =>
+  eachDayOfInterval({
+    start: startOfMonth(monthDate),
+    end: endOfMonth(monthDate)
+  }).reduce((sum, day) => {
+    const dateKey = toDateKey(day);
+    const holidayConfig = holidays[dateKey];
+    if (holidayConfig && !holidayConfig.isWorkingDay) return sum;
+    if (day.getDay() === 0 || day.getDay() === 6) {
+      return holidayConfig?.isWorkingDay ? sum + 1 : sum;
+    }
+    return sum + 1;
+  }, 0);
+
+const computeWeekAvailableDays = (weekStartDate: Date, holidays: PublicHolidayConfig) =>
+  eachDayOfInterval({
+    start: weekStartDate,
+    end: endOfWeek(weekStartDate, { weekStartsOn: 1 })
+  }).reduce((sum, day) => {
+    const dateKey = toDateKey(day);
+    const holidayConfig = holidays[dateKey];
+    if (holidayConfig && !holidayConfig.isWorkingDay) return sum;
+    if (day.getDay() === 0 || day.getDay() === 6) {
+      return holidayConfig?.isWorkingDay ? sum + 1 : sum;
+    }
+    return sum + 1;
+  }, 0);
+
+const countPublicHolidaysInDateKeys = (
+  dateKeys: string[],
+  entriesForDates: Record<string, TimesheetDayEntry>,
+  holidays: PublicHolidayConfig
+) => {
+  const configuredSet = new Set(dateKeys.filter((dateKey) => holidays[dateKey]));
+  const manualOnly = dateKeys.filter(
+    (dateKey) => entriesForDates[dateKey]?.isPublicHoliday && !configuredSet.has(dateKey)
+  ).length;
+  return configuredSet.size + manualOnly;
+};
 
 type YearMonthSummaryRow = {
   label: string;
@@ -61,6 +122,7 @@ type YearMonthSummaryRow = {
   notWorkedDays: number;
   hours: number;
   holidays: number;
+  daysOff: number;
 };
 
 function YearSummaryMetrics({
@@ -70,6 +132,7 @@ function YearSummaryMetrics({
   notWorkedDays,
   hours,
   holidays,
+  daysOff,
   emphasized = false,
 }: YearMonthSummaryRow & { emphasized?: boolean }) {
   return (
@@ -88,6 +151,7 @@ function YearSummaryMetrics({
           ["Not worked", notWorkedDays],
           ["Hours", formatHours(hours)],
           ["Holidays", holidays],
+          ["Days (Off)", daysOff],
         ].map(([metricLabel, metricValue]) => (
           <div key={metricLabel} className="flex items-center justify-between gap-2">
             <dt className="text-[11px] text-muted-foreground">{metricLabel}</dt>
@@ -98,6 +162,65 @@ function YearSummaryMetrics({
     </div>
   );
 }
+
+const STAT_CARD_THEMES = {
+  violet: {
+    iconBg: "bg-violet-200 dark:bg-violet-500/20",
+    icon: "text-violet-900 dark:text-violet-300",
+  },
+  pink: {
+    iconBg: "bg-pink-200 dark:bg-pink-500/20",
+    icon: "text-pink-900 dark:text-pink-300",
+  },
+  yellow: {
+    iconBg: "bg-yellow-200 dark:bg-yellow-500/20",
+    icon: "text-yellow-900 dark:text-yellow-300",
+  },
+  cyan: {
+    iconBg: "bg-cyan-200 dark:bg-cyan-500/20",
+    icon: "text-cyan-900 dark:text-cyan-300",
+  },
+  orange: {
+    iconBg: "bg-orange-200 dark:bg-orange-500/20",
+    icon: "text-orange-900 dark:text-orange-300",
+  },
+  emerald: {
+    iconBg: "bg-emerald-200 dark:bg-emerald-500/20",
+    icon: "text-emerald-900 dark:text-emerald-300",
+  },
+} as const;
+
+function MonthStatCard({
+  icon: Icon,
+  theme,
+  value,
+  subValue,
+  label,
+}: {
+  icon: LucideIcon;
+  theme: keyof typeof STAT_CARD_THEMES;
+  value: string;
+  subValue?: string;
+  label: string;
+}) {
+  const { iconBg, icon: iconColor } = STAT_CARD_THEMES[theme];
+
+  return (
+    <Card>
+      <CardContent className="flex min-h-[148px] flex-col items-center justify-center gap-3 p-4 text-center">
+        <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl", iconBg)}>
+          <Icon className={cn("h-5 w-5", iconColor)} />
+        </div>
+        <div className="space-y-1">
+          <p className="text-3xl font-bold tabular-nums leading-none text-foreground">{value}</p>
+          {subValue && <p className="text-sm text-muted-foreground tabular-nums">{subValue}</p>}
+          <p className="text-sm text-muted-foreground">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 const calendarFillClassNames = {
   months: "w-full",
   month: "w-full space-y-4",
@@ -109,8 +232,22 @@ const calendarFillClassNames = {
   day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
   day_selected: "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 focus:bg-emerald-200",
   day_today: "bg-orange-200 text-orange-800 hover:bg-orange-200 focus:bg-orange-200 aria-selected:bg-emerald-100 aria-selected:text-emerald-800",
-  day_outside: "invisible pointer-events-none"
+  day_outside: "invisible pointer-events-none",
+  caption: "flex justify-center pt-1 relative items-center px-[5.5rem]",
+  caption_label: "text-lg font-bold",
+  nav_button:
+    "inline-flex h-8 items-center justify-center rounded-md border border-input bg-transparent px-2.5 text-xs font-semibold opacity-100 shadow-sm hover:bg-accent hover:text-accent-foreground",
+  nav_button_previous: "absolute left-1",
+  nav_button_next: "absolute right-1"
 };
+const calendarNavComponents = {
+  IconLeft: () => <span className="font-semibold">Previous</span>,
+  IconRight: () => <span className="font-semibold">Next</span>
+};
+const paidDayBadgeClassName = "px-2 py-0 text-[10px] border-emerald-200 bg-emerald-50 text-emerald-800";
+const dayOffBadgeClassName = "px-2 py-0 text-[10px] border-red-200 bg-red-100 text-red-800";
+const unpaidDayCalendarClassName =
+  "bg-red-100 text-red-800 hover:bg-red-200 focus:bg-red-200 aria-selected:bg-red-100 aria-selected:text-red-800";
 
 const normalizeTimesheetStore = (value: unknown): TimesheetStore => {
   if (!value || typeof value !== "object") return {};
@@ -128,14 +265,18 @@ const normalizeTimesheetStore = (value: unknown): TimesheetStore => {
           : DEFAULT_WORKING_DAY_HOURS
       );
       const isPublicHoliday = day.isPublicHoliday === true;
+      const isDayOff = day.isDayOff === true;
       monthEntries[dateKey] = {
         ...(day.id ? { id: String(day.id) } : {}),
         hours,
-        isPublicHoliday,
+        isPublicHoliday: isDayOff ? false : isPublicHoliday,
+        isDayOff,
         isPaidDay:
-          typeof day.isPaidDay === "boolean"
-            ? day.isPaidDay && !isPublicHoliday && !isWeekendDateKey(dateKey)
-            : getDefaultIsPaidDay(dateKey, isPublicHoliday)
+          isDayOff
+            ? false
+            : typeof day.isPaidDay === "boolean"
+              ? day.isPaidDay && !isPublicHoliday && !isWeekendDateKey(dateKey)
+              : getDefaultIsPaidDay(dateKey, isPublicHoliday)
       };
     });
     if (Object.keys(monthEntries).length > 0) normalized[month] = monthEntries;
@@ -231,6 +372,7 @@ export default function Timesheets() {
   const [editDateKey, setEditDateKey] = useState<string | null>(null);
   const [editHours, setEditHours] = useState<number>(DEFAULT_WORKING_DAY_HOURS);
   const [editPublicHoliday, setEditPublicHoliday] = useState(false);
+  const [editDayOff, setEditDayOff] = useState(false);
   const [editPaidDay, setEditPaidDay] = useState(false);
   const [holidaySettingsOpen, setHolidaySettingsOpen] = useState(false);
   const [publicHolidays, setPublicHolidays] = useState<PublicHolidayConfig>({});
@@ -286,6 +428,16 @@ export default function Timesheets() {
         .map((dateKey) => new Date(`${dateKey}T00:00:00`)),
     [selectedDateKeys, monthEntries]
   );
+  const selectedUnpaidDates = useMemo(
+    () =>
+      selectedDateKeys
+        .filter((dateKey) => {
+          const entry = monthEntries[dateKey];
+          return entry && !entry.isPublicHoliday && !entry.isPaidDay;
+        })
+        .map((dateKey) => new Date(`${dateKey}T00:00:00`)),
+    [selectedDateKeys, monthEntries]
+  );
   const publicHolidayDateKeysInMonth = useMemo(
     () => Object.keys(publicHolidays).filter((dateKey) => dateKey.startsWith(`${monthKey}-`)),
     [publicHolidays, monthKey]
@@ -315,13 +467,20 @@ export default function Timesheets() {
    * month entries — non-working configured holidays are removed from timesheet entries
    * but still appear on the calendar and in the year table.
    */
-  const publicHolidayCount = useMemo(() => {
-    const configuredSet = new Set(publicHolidayDateKeysInMonth);
-    const manualOnly = selectedDateKeys.filter(
-      (dateKey) => monthEntries[dateKey]?.isPublicHoliday && !configuredSet.has(dateKey)
-    ).length;
-    return publicHolidayDateKeysInMonth.length + manualOnly;
-  }, [publicHolidayDateKeysInMonth, selectedDateKeys, monthEntries]);
+  const publicHolidayCount = useMemo(
+    () => countMonthPublicHolidays(monthKey, monthEntries, publicHolidays),
+    [monthKey, monthEntries, publicHolidays]
+  );
+  const monthAvailableDays = useMemo(
+    () => computeMonthAvailableDays(month, publicHolidays),
+    [month, publicHolidays]
+  );
+  const monthWorkedDays = useMemo(
+    () => Object.values(monthEntries).filter((entry) => entry.isPaidDay && !entry.isDayOff).length,
+    [monthEntries]
+  );
+  const monthNotWorkedDays = Math.max(monthAvailableDays - monthWorkedDays, 0);
+  const monthRemainingDays = Math.max(monthAvailableDays - totalDaysLogged, 0);
 
   const weekStart = startOfWeek(weekDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(weekDate, { weekStartsOn: 1 });
@@ -341,6 +500,31 @@ export default function Timesheets() {
         .filter((value): value is { dateKey: string; entry: TimesheetDayEntry } => value !== null),
     [timesheets, weekDays]
   );
+  const weekDateKeys = useMemo(() => weekDays.map((day) => toDateKey(day)), [weekDays]);
+  const weekEntriesForDates = useMemo(() => {
+    const entriesForDates: Record<string, TimesheetDayEntry> = {};
+    weekDateKeys.forEach((dateKey) => {
+      const entry = timesheets[dateKey.slice(0, 7)]?.[dateKey];
+      if (entry) entriesForDates[dateKey] = entry;
+    });
+    return entriesForDates;
+  }, [weekDateKeys, timesheets]);
+  const weekDaysLogged = weekEntries.length;
+  const weekHoursLogged = weekEntries.reduce((sum, item) => sum + item.entry.hours, 0);
+  const weekPublicHolidays = countPublicHolidaysInDateKeys(
+    weekDateKeys,
+    weekEntriesForDates,
+    publicHolidays
+  );
+  const weekAvailableDays = useMemo(
+    () => computeWeekAvailableDays(weekStart, publicHolidays),
+    [weekStart, publicHolidays]
+  );
+  const weekWorkedDays = weekEntries.filter(
+    (item) => item.entry.isPaidDay && !item.entry.isDayOff
+  ).length;
+  const weekNotWorkedDays = Math.max(weekAvailableDays - weekWorkedDays, 0);
+  const weekRemainingDays = Math.max(weekAvailableDays - weekDaysLogged, 0);
 
   const selectedYear = month.getFullYear();
   const yearMonthSummaries = useMemo(
@@ -349,21 +533,11 @@ export default function Timesheets() {
         const currentMonth = new Date(selectedYear, monthIndex, 1);
         const key = toMonthKey(currentMonth);
         const entries = timesheets[key] || {};
-        const days = Object.keys(entries).length;
+        const daysOff = countMonthDaysOff(entries);
+        const days = Object.values(entries).filter((entry) => entry.isPaidDay && !entry.isDayOff).length;
         const hours = Object.values(entries).reduce((sum, entry) => sum + entry.hours, 0);
-        const holidays = Object.keys(publicHolidays).filter((dateKey) => dateKey.startsWith(`${key}-`)).length;
-        const availableDays = eachDayOfInterval({
-          start: startOfMonth(currentMonth),
-          end: endOfMonth(currentMonth)
-        }).reduce((sum, day) => {
-          const dateKey = toDateKey(day);
-          const holidayConfig = publicHolidays[dateKey];
-          if (holidayConfig && !holidayConfig.isWorkingDay) return sum;
-          if (day.getDay() === 0 || day.getDay() === 6) {
-            return holidayConfig?.isWorkingDay ? sum + 1 : sum;
-          }
-          return sum + 1;
-        }, 0);
+        const holidays = countMonthPublicHolidays(key, entries, publicHolidays);
+        const availableDays = computeMonthAvailableDays(currentMonth, publicHolidays);
         return {
           key,
           label: format(currentMonth, "MMMM"),
@@ -371,7 +545,8 @@ export default function Timesheets() {
           availableDays,
           notWorkedDays: Math.max(availableDays - days, 0),
           hours,
-          holidays
+          holidays,
+          daysOff
         };
       }),
     [selectedYear, timesheets, publicHolidays]
@@ -379,15 +554,9 @@ export default function Timesheets() {
   const yearDaysLogged = yearMonthSummaries.reduce((sum, monthSummary) => sum + monthSummary.days, 0);
   const yearHoursLogged = yearMonthSummaries.reduce((sum, monthSummary) => sum + monthSummary.hours, 0);
   const yearPublicHolidays = yearMonthSummaries.reduce((sum, monthSummary) => sum + monthSummary.holidays, 0);
+  const yearDaysOff = yearMonthSummaries.reduce((sum, monthSummary) => sum + monthSummary.daysOff, 0);
   const yearAvailableDays = yearMonthSummaries.reduce((sum, monthSummary) => sum + monthSummary.availableDays, 0);
   const yearNotWorkedDays = yearMonthSummaries.reduce((sum, monthSummary) => sum + monthSummary.notWorkedDays, 0);
-
-  const weekDaysLogged = weekEntries.length;
-  const weekHoursLogged = weekEntries.reduce((sum, item) => sum + item.entry.hours, 0);
-  const weekPublicHolidays = weekEntries.reduce(
-    (sum, item) => sum + (item.entry.isPublicHoliday ? 1 : 0),
-    0
-  );
 
   const stats = useMemo(() => {
     if (view === "week") {
@@ -396,8 +565,16 @@ export default function Timesheets() {
         hoursValue: formatHours(weekHoursLogged),
         daysLabel: "Selected week days",
         daysValue: String(weekDaysLogged),
-        holidaysLabel: "Public holidays",
-        holidaysValue: String(weekPublicHolidays)
+        holidaysLabel: "Days (Public holidays)",
+        holidaysValue: String(weekPublicHolidays),
+        workedLabel: "Days (Worked)",
+        workedValue: String(weekWorkedDays),
+        availableLabel: "Days (Available)",
+        availableValue: String(weekAvailableDays),
+        notWorkedLabel: "Days (Not yet worked)",
+        notWorkedValue: String(weekNotWorkedDays),
+        remainingLabel: "Days (Remaining)",
+        remainingValue: String(weekRemainingDays)
       };
     }
 
@@ -405,9 +582,15 @@ export default function Timesheets() {
       return {
         hoursLabel: "Selected year hours",
         hoursValue: formatHours(yearHoursLogged),
-        daysLabel: "Selected year days",
-        daysValue: String(yearDaysLogged),
-        holidaysLabel: "Public holidays",
+        workedLabel: "Days (Worked)",
+        workedValue: String(yearDaysLogged),
+        availableLabel: "Days (Available)",
+        availableValue: String(yearAvailableDays),
+        notWorkedLabel: "Days (Not yet worked)",
+        notWorkedValue: String(yearNotWorkedDays),
+        daysOffLabel: "Days (Off)",
+        daysOffValue: String(yearDaysOff),
+        holidaysLabel: "Days (Public holidays)",
         holidaysValue: String(yearPublicHolidays)
       };
     }
@@ -417,20 +600,39 @@ export default function Timesheets() {
       hoursValue: formatHours(selectedMonthHours),
       daysLabel: "Selected month days",
       daysValue: String(totalDaysLogged),
-      holidaysLabel: "Public holidays",
-      holidaysValue: String(publicHolidayCount)
+      holidaysLabel: "Days (Public holidays)",
+      holidaysValue: String(publicHolidayCount),
+      workedLabel: "Days (Worked)",
+      workedValue: String(monthWorkedDays),
+      availableLabel: "Days (Available)",
+      availableValue: String(monthAvailableDays),
+      notWorkedLabel: "Days (Not yet worked)",
+      notWorkedValue: String(monthNotWorkedDays),
+      remainingLabel: "Days (Remaining)",
+      remainingValue: String(monthRemainingDays)
     };
   }, [
     view,
     weekHoursLogged,
     weekDaysLogged,
     weekPublicHolidays,
+    weekWorkedDays,
+    weekAvailableDays,
+    weekNotWorkedDays,
+    weekRemainingDays,
     yearHoursLogged,
     yearDaysLogged,
+    yearAvailableDays,
+    yearNotWorkedDays,
+    yearDaysOff,
     yearPublicHolidays,
     selectedMonthHours,
     totalDaysLogged,
-    publicHolidayCount
+    publicHolidayCount,
+    monthWorkedDays,
+    monthAvailableDays,
+    monthNotWorkedDays,
+    monthRemainingDays
   ]);
 
   useEffect(() => {
@@ -538,6 +740,7 @@ export default function Timesheets() {
     setEditDateKey(dateKey);
     setEditHours(entry.hours);
     setEditPublicHoliday(entry.isPublicHoliday);
+    setEditDayOff(entry.isDayOff === true);
     setEditPaidDay(entry.isPaidDay === true);
   };
 
@@ -545,8 +748,9 @@ export default function Timesheets() {
     if (!editDateKey) return;
     updateDayEntry(editDateKey, () => ({
       hours: clampHours(editHours),
-      isPublicHoliday: editPublicHoliday,
-      isPaidDay: editPublicHoliday ? false : editPaidDay
+      isPublicHoliday: editDayOff ? false : editPublicHoliday,
+      isDayOff: editDayOff,
+      isPaidDay: editPublicHoliday || editDayOff ? false : editPaidDay
     }));
     setEditDateKey(null);
   };
@@ -589,7 +793,7 @@ export default function Timesheets() {
 
       if (isWorkingDay) {
         const nextEntry: TimesheetDayEntry = existing
-          ? { ...existing, isPublicHoliday: true, isPaidDay: false }
+          ? { ...existing, isPublicHoliday: true, isPaidDay: false, isDayOff: false }
           : { ...createDefaultEntry(dateKey, true), isPaidDay: false };
         next[monthForDate] = {
           ...monthEntriesForDate,
@@ -647,42 +851,128 @@ export default function Timesheets() {
           )}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardContent className="p-5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Clock3 className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">{stats.hoursLabel}</p>
-                <p className="text-2xl font-semibold">{stats.hoursValue}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <CalendarCheck className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">{stats.daysLabel}</p>
-                <p className="text-2xl font-semibold">{stats.daysValue}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <CalendarDays className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">{stats.holidaysLabel}</p>
-                <p className="text-2xl font-semibold">{stats.holidaysValue}</p>
-              </div>
-            </CardContent>
-          </Card>
+        <div className={`grid gap-4 ${
+          view === "month" || view === "week"
+            ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-6"
+            : view === "year"
+              ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
+              : "md:grid-cols-3"
+        }`}>
+          {view === "month" ? (
+            <>
+              <MonthStatCard
+                icon={CalendarCheck}
+                theme="violet"
+                value={stats.daysValue}
+                subValue={`${stats.hoursValue} hours`}
+                label="Selected month"
+              />
+              <MonthStatCard
+                icon={CalendarDays}
+                theme="pink"
+                value={stats.holidaysValue}
+                label="Days (Public holidays)"
+              />
+              <MonthStatCard
+                icon={Briefcase}
+                theme="yellow"
+                value={stats.workedValue}
+                label="Days (Worked)"
+              />
+              <MonthStatCard
+                icon={CalendarRange}
+                theme="cyan"
+                value={stats.availableValue}
+                label={stats.availableLabel}
+              />
+              <MonthStatCard
+                icon={CalendarMinus}
+                theme="orange"
+                value={stats.notWorkedValue}
+                label={stats.notWorkedLabel}
+              />
+              <MonthStatCard
+                icon={CalendarClock}
+                theme="emerald"
+                value={stats.remainingValue}
+                label={stats.remainingLabel}
+              />
+            </>
+          ) : view === "year" ? (
+            <>
+              <MonthStatCard
+                icon={CalendarCheck}
+                theme="violet"
+                value={stats.workedValue}
+                subValue={`${stats.hoursValue} hours`}
+                label="Selected year"
+              />
+              <MonthStatCard
+                icon={CalendarRange}
+                theme="cyan"
+                value={stats.availableValue}
+                label={stats.availableLabel}
+              />
+              <MonthStatCard
+                icon={CalendarMinus}
+                theme="orange"
+                value={stats.notWorkedValue}
+                label={stats.notWorkedLabel}
+              />
+              <MonthStatCard
+                icon={CalendarClock}
+                theme="yellow"
+                value={stats.daysOffValue}
+                label={stats.daysOffLabel}
+              />
+              <MonthStatCard
+                icon={CalendarDays}
+                theme="pink"
+                value={stats.holidaysValue}
+                label="Days (Public holidays)"
+              />
+            </>
+          ) : (
+            <>
+              <MonthStatCard
+                icon={CalendarCheck}
+                theme="violet"
+                value={stats.daysValue}
+                subValue={`${stats.hoursValue} hours`}
+                label="Selected week"
+              />
+              <MonthStatCard
+                icon={CalendarDays}
+                theme="pink"
+                value={stats.holidaysValue}
+                label="Days (Public holidays)"
+              />
+              <MonthStatCard
+                icon={Briefcase}
+                theme="yellow"
+                value={stats.workedValue}
+                label={stats.workedLabel}
+              />
+              <MonthStatCard
+                icon={CalendarRange}
+                theme="cyan"
+                value={stats.availableValue}
+                label={stats.availableLabel}
+              />
+              <MonthStatCard
+                icon={CalendarMinus}
+                theme="orange"
+                value={stats.notWorkedValue}
+                label={stats.notWorkedLabel}
+              />
+              <MonthStatCard
+                icon={CalendarClock}
+                theme="emerald"
+                value={stats.remainingValue}
+                label={stats.remainingLabel}
+              />
+            </>
+          )}
         </div>
 
         <TabsContent value="week" className="space-y-4">
@@ -729,7 +1019,8 @@ export default function Timesheets() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
                           {entry?.isPublicHoliday && <Badge variant="outline" className="px-2 py-0 text-[10px]">Public holiday</Badge>}
-                          {entry?.isPaidDay && <Badge variant="outline" className="px-2 py-0 text-[10px]">Paid day</Badge>}
+                          {entry?.isDayOff && <Badge variant="outline" className={dayOffBadgeClassName}>Day off</Badge>}
+                          {entry?.isPaidDay && <Badge variant="outline" className={paidDayBadgeClassName}>Paid day</Badge>}
                         </div>
                         {entry && (
                           <div className="flex items-center gap-1">
@@ -763,6 +1054,7 @@ export default function Timesheets() {
                 <div className="rounded-md border p-3">
                   <Calendar
                     mode="multiple"
+                    weekStartsOn={1}
                     month={month}
                     onMonthChange={setMonth}
                     selected={selectedDates}
@@ -771,17 +1063,20 @@ export default function Timesheets() {
                     disabled={{ dayOfWeek: WEEKEND_DAYS }}
                     modifiers={{
                       publicHoliday: selectedPublicHolidayDates,
-                      configuredHoliday: configuredHolidayDatesInMonth
+                      configuredHoliday: configuredHolidayDatesInMonth,
+                      unpaid: selectedUnpaidDates
                     }}
                     modifiersClassNames={{
                       publicHoliday: "bg-emerald-500 text-white hover:bg-emerald-500 focus:bg-emerald-500",
-                      configuredHoliday: "bg-blue-100 text-blue-800"
+                      configuredHoliday: "bg-blue-100 text-blue-800",
+                      unpaid: unpaidDayCalendarClassName
                     }}
                     classNames={calendarFillClassNames}
+                    components={calendarNavComponents}
                   />
                 </div>
                 <p className="mt-4 text-sm text-muted-foreground">
-                  Select individual weekdays only. Weekends are disabled. Configured public holidays are prefilled in blue.
+                  Select individual weekdays only. Weekends are disabled. Configured public holidays are prefilled in blue. Paid days appear in light green; unpaid days and days off appear in light red.
                 </p>
               </CardContent>
             </Card>
@@ -809,7 +1104,8 @@ export default function Timesheets() {
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5">
                               {entry.isPublicHoliday && <Badge variant="outline" className="px-2 py-0 text-[10px]">Public holiday</Badge>}
-                              {entry.isPaidDay && <Badge variant="outline" className="px-2 py-0 text-[10px]">Paid day</Badge>}
+                              {entry.isDayOff && <Badge variant="outline" className={dayOffBadgeClassName}>Day off</Badge>}
+                              {entry.isPaidDay && <Badge variant="outline" className={paidDayBadgeClassName}>Paid day</Badge>}
                             </div>
                             <div className="flex items-center gap-1">
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(dateKey)}>
@@ -865,6 +1161,7 @@ export default function Timesheets() {
                     notWorkedDays={summary.notWorkedDays}
                     hours={summary.hours}
                     holidays={summary.holidays}
+                    daysOff={summary.daysOff}
                   />
                 ))}
                 <div className="col-span-2">
@@ -875,41 +1172,45 @@ export default function Timesheets() {
                     notWorkedDays={yearNotWorkedDays}
                     hours={yearHoursLogged}
                     holidays={yearPublicHolidays}
+                    daysOff={yearDaysOff}
                     emphasized
                   />
                 </div>
               </div>
 
               <div className="hidden lg:block rounded-md border overflow-x-auto">
-                <div className="min-w-[44rem]">
-                  <div className="grid grid-cols-6 bg-muted px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="min-w-[52rem]">
+                  <div className="grid grid-cols-7 bg-muted px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     <span className="pr-2">Month</span>
                     <span className="pr-2 whitespace-nowrap">Days (Worked)</span>
                     <span className="pr-2 whitespace-nowrap">Days (Available)</span>
-                    <span className="pr-2 whitespace-nowrap">Days (Not worked)</span>
+                    <span className="pr-2 whitespace-nowrap">Days (Not yet worked)</span>
                     <span className="pr-2">Hours</span>
-                    <span className="whitespace-nowrap">Public holidays</span>
+                    <span className="pr-2 whitespace-nowrap">Days (Public holidays)</span>
+                    <span className="whitespace-nowrap">Days (Off)</span>
                   </div>
                   {yearMonthSummaries.map((summary) => (
                     <div
                       key={summary.key}
-                      className="grid grid-cols-6 px-4 py-2 text-sm border-t tabular-nums"
+                      className="grid grid-cols-7 px-4 py-2 text-sm border-t tabular-nums"
                     >
                       <span className="pr-2 font-medium">{summary.label}</span>
                       <span className="pr-2">{summary.days}</span>
                       <span className="pr-2">{summary.availableDays}</span>
                       <span className="pr-2">{summary.notWorkedDays}</span>
                       <span className="pr-2">{formatHours(summary.hours)}</span>
-                      <span>{summary.holidays}</span>
+                      <span className="pr-2">{summary.holidays}</span>
+                      <span>{summary.daysOff}</span>
                     </div>
                   ))}
-                  <div className="grid grid-cols-6 px-4 py-2 text-sm border-t bg-muted/40 font-semibold tabular-nums">
+                  <div className="grid grid-cols-7 px-4 py-2 text-sm border-t bg-muted/40 font-semibold tabular-nums">
                     <span className="pr-2">Total</span>
                     <span className="pr-2">{yearDaysLogged}</span>
                     <span className="pr-2">{yearAvailableDays}</span>
                     <span className="pr-2">{yearNotWorkedDays}</span>
                     <span className="pr-2">{formatHours(yearHoursLogged)}</span>
-                    <span>{yearPublicHolidays}</span>
+                    <span className="pr-2">{yearPublicHolidays}</span>
+                    <span>{yearDaysOff}</span>
                   </div>
                 </div>
               </div>
@@ -1010,24 +1311,53 @@ export default function Timesheets() {
               />
             </div>
 
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={editPaidDay}
-                disabled={editPublicHoliday}
-                onCheckedChange={(checked) => setEditPaidDay(checked === true)}
-              />
-              Mark as paid day
-            </label>
+            <div className="space-y-2">
+              <Label>Payment status</Label>
+              <RadioGroup
+                value={editPaidDay ? "paid" : "unpaid"}
+                onValueChange={(value) => setEditPaidDay(value === "paid")}
+                disabled={editPublicHoliday || editDayOff}
+                className="flex gap-6"
+              >
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <RadioGroupItem value="paid" id="edit-paid" />
+                  Paid
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <RadioGroupItem value="unpaid" id="edit-unpaid" />
+                  Unpaid
+                </label>
+              </RadioGroup>
+            </div>
             <label className="flex items-center gap-2 text-sm">
               <Checkbox
                 checked={editPublicHoliday}
+                disabled={editDayOff}
                 onCheckedChange={(checked) => {
                   const isPublicHoliday = checked === true;
                   setEditPublicHoliday(isPublicHoliday);
-                  if (isPublicHoliday) setEditPaidDay(false);
+                  if (isPublicHoliday) {
+                    setEditDayOff(false);
+                    setEditPaidDay(false);
+                  }
                 }}
               />
               Mark as public holiday
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={editDayOff}
+                disabled={editPublicHoliday}
+                onCheckedChange={(checked) => {
+                  const isDayOff = checked === true;
+                  setEditDayOff(isDayOff);
+                  if (isDayOff) {
+                    setEditPublicHoliday(false);
+                    setEditPaidDay(false);
+                  }
+                }}
+              />
+              Mark as day off
             </label>
           </div>
 

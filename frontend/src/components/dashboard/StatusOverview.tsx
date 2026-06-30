@@ -97,16 +97,16 @@ export default function StatusOverview({ invoices }) {
         {/* Summary bar */}
         <div className="grid grid-cols-3 gap-4 mb-4 p-4 bg-muted/40 rounded-lg">
           <div className="text-center">
-            <p className="text-xs text-muted-foreground mb-1">Total Income</p>
-            <p className="text-lg font-bold text-accent">£{incomeTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
+            <p className="text-sm text-muted-foreground mb-1.5">Total Income</p>
+            <p className="text-2xl font-bold text-accent">£{incomeTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
           </div>
           <div className="text-center border-x border-border">
-            <p className="text-xs text-muted-foreground mb-1">Total Expenses</p>
-            <p className="text-lg font-bold text-destructive">£{expenseTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
+            <p className="text-sm text-muted-foreground mb-1.5">Total Expenses</p>
+            <p className="text-2xl font-bold text-destructive">£{expenseTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-muted-foreground mb-1">Net total</p>
-            <p className={`text-lg font-bold ${grandTotal > 0 ? "text-accent" : grandTotal < 0 ? "text-destructive" : ""}`}>
+            <p className="text-sm text-muted-foreground mb-1.5">Net total</p>
+            <p className={`text-2xl font-bold ${grandTotal > 0 ? "text-accent" : grandTotal < 0 ? "text-destructive" : ""}`}>
               £{grandTotal.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">Income − expenses</p>

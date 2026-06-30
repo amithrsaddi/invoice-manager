@@ -24,16 +24,16 @@ export const PURCHASE_ORDER_TABLE_COLUMNS: PurchaseOrderColumnDef[] = [
   { id: "linkedTo", label: "Linked To", defaultVisible: true },
   { id: "type", label: "Type", defaultVisible: true, contactsOnly: true },
   { id: "quantity", label: "Quantity", defaultVisible: false },
-  { id: "currency", label: "Currency", defaultVisible: true },
+  { id: "currency", label: "Currency", defaultVisible: false },
   { id: "unitPrice", label: "Unit Price", defaultVisible: true },
-  { id: "totalValue", label: "Total Value", defaultVisible: true },
+  { id: "totalValue", label: "Total Value", defaultVisible: false },
   { id: "orderDate", label: "Order Date", defaultVisible: false },
   { id: "startDate", label: "Start Date", defaultVisible: true },
   { id: "expiryDate", label: "Expiry Date", defaultVisible: true },
   { id: "deliveryDate", label: "Delivery Date", defaultVisible: false }
 ];
 
-const STORAGE_KEY = "invoice_manager_po_table_columns";
+const STORAGE_KEY = "invoice_manager_po_table_columns_v2";
 
 export function getPurchaseOrderColumns(includeTypeColumn: boolean) {
   return PURCHASE_ORDER_TABLE_COLUMNS.filter((col) => !col.contactsOnly || includeTypeColumn);

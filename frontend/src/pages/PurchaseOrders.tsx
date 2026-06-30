@@ -201,21 +201,18 @@ export default function PurchaseOrders() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Saved Purchase Orders</CardTitle></CardHeader>
-        <CardContent>
-          {purchaseOrders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No purchase orders yet.</p>
-          ) : (
-            <PurchaseOrdersTable
-              purchaseOrders={purchaseOrders}
-              mergeLinkedTypeInRow
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          )}
-        </CardContent>
-      </Card>
+      {purchaseOrders.length === 0 ? (
+        <Card className="p-16 text-center">
+          <p className="text-lg font-medium text-muted-foreground">No purchase orders yet</p>
+        </Card>
+      ) : (
+        <PurchaseOrdersTable
+          purchaseOrders={purchaseOrders}
+          mergeLinkedTypeInRow
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      )}
     </div>
   );
 }

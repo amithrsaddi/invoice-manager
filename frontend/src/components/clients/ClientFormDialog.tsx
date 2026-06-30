@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -22,7 +23,8 @@ export default function ClientFormDialog({ open, onClose, client }) {
     townCity: "",
     county: "",
     postcode: "",
-    notes: ""
+    notes: "",
+    status: "active"
   });
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export default function ClientFormDialog({ open, onClose, client }) {
         county: client.county || "",
         postcode: client.postcode || "",
         notes: client.notes || "",
+        status: client.status === "inactive" ? "inactive" : "active",
       });
     } else {
       setForm({
@@ -50,7 +53,8 @@ export default function ClientFormDialog({ open, onClose, client }) {
         townCity: "",
         county: "",
         postcode: "",
-        notes: ""
+        notes: "",
+        status: "active"
       });
     }
   }, [client, open]);
@@ -94,6 +98,18 @@ export default function ClientFormDialog({ open, onClose, client }) {
           <div className="space-y-1.5">
             <Label>Phone</Label>
             <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+1 234 567 890" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Status</Label>
+            <Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5 md:col-span-2">
